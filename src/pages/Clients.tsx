@@ -75,26 +75,18 @@ const clients = [
 
 const testimonials = [
   {
-    quote: "Xorec transformed our brand story into a cinematic masterpiece. The ROI on our campaign exceeded expectations by 300%.",
-    author: "Sarah Johnson",
-    position: "Marketing Director",
-    company: "Ferrari",
+    quote: "Xorec truly understands the balance between creativity and efficiency. They captured our brand's essence perfectly and delivered the final product well within the deadline. Their professionalism and dedication are unmatched.",
+    author: "RAJESH BR",
+    position: "Marketing Head, Lamborghini Bangalore",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
   },
   {
-    quote: "Their attention to detail and creative vision helped us showcase our new aircraft in ways we never imagined possible.",
-    author: "Michael Chen",
-    position: "VP of Brand",
-    company: "Emirates",
+    quote: "Xorec transformed our ideas into stunning content that perfectly reflect our brand’s essence. Their creativity, attention to detail, and timely delivery set them apart. They balanced innovation with efficiency and made the entire process seamless. I’d definitely recommend them for top-quality video production!",
+    author: "HARI KRISHNAN",
+    position: "Lead - CCSE, Air India Express",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
   },
-  {
-    quote: "Working with Xorec elevated our property showcases to art. Their videos have become the gold standard in luxury hospitality.",
-    author: "Elena Rodriguez",
-    position: "Global Creative Director",
-    company: "Marriott",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80"
-  }
+ 
 ];
 
 const Clients = () => {
@@ -192,7 +184,7 @@ const Clients = () => {
           </div>
 
           {/* Testimonials Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {testimonials.map((testimonial, index) => (
               <motion.div
                 key={index}
@@ -203,11 +195,11 @@ const Clients = () => {
                 className="bg-white p-8 rounded-lg border border-gray-200 shadow-lg"
               >
                 <div className="flex items-center mb-6">
-                  <img
+                  {/* <img
                     src={testimonial.image}
                     alt={testimonial.author}
                     className="w-16 h-16 rounded-full object-cover mr-4"
-                  />
+                  /> */}
                   <div>
                     <h3 className="font-bold text-lg text-black">{testimonial.author}</h3>
                     <p className="text-gray-600">{testimonial.position}</p>
