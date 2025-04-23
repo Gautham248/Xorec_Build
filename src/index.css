@@ -1,0 +1,296 @@
+
+@font-face {
+  font-family: 'MGLight';
+  src: url('assets/fonts/MonumentGrotesk/ABCMonumentGrotesk-Light-Trial.otf') format('opentype'),
+       url('assets/fonts/MonumentGrotesk/ABCMonumentGrotesk-Light-Trial.woff') format('woff');
+  font-weight: 300; /* Light weight is typically 300 */
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MGRegular';
+  src: url('assets/fonts/MonumentGrotesk/ABCMonumentGrotesk-Regular-Trial.otf') format('opentype'),
+       url('assets/fonts/MonumentGrotesk/ABCMonumentGrotesk-Regular-Trial.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MGMedium';
+  src: url('assets/fonts/MonumentGrotesk/ABCMonumentGrotesk-Medium-Trial.otf') format('opentype'),
+       url('assets/fonts/MonumentGrotesk/ABCMonumentGrotesk-Medium-Trial.woff') format('woff');
+  font-weight: 500; /* Medium weight is typically 500 */
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-primary-bg text-primary-text font-sans;
+  }
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer components {
+  .container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-transparent 
+    text-base font-medium rounded-md shadow-sm transition-all duration-300;
+  }
+  
+  .btn-primary {
+    @apply bg-neutral-900 text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-900;
+  }
+  
+  .btn-secondary {
+    @apply bg-transparent border border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white focus:outline-none;
+  }
+  
+  .section-title {
+    @apply text-4xl md:text-5xl font-bold mb-6 leading-tight text-neutral-900;
+  }
+  
+  .section-subtitle {
+    @apply text-xl text-neutral-600 mb-12 max-w-3xl;
+  }
+  
+  .card {
+    @apply bg-white border border-neutral-200 hover:border-neutral-900 transition-all duration-300 rounded-lg shadow-sm hover:shadow-lg;
+  }
+  
+  .icon-container {
+    @apply w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-900;
+  }
+
+  .reveal-text {
+    @apply overflow-hidden;
+  }
+  
+  .reveal-text span {
+    @apply block transform translate-y-full opacity-0;
+  }
+
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease-out;
+  }
+
+  .animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .tile-hover {
+    @apply transition-all duration-500 ease-out hover:scale-[1.02] hover:shadow-xl;
+  }
+
+  .fade-up {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .fade-up.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom Animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.6s ease-out forwards;
+}
+
+/* Scroll-triggered animations */
+.scroll-animate {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-animate.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.stagger-children.active > * {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stagger-children.active > *:nth-child(1) { transition-delay: 0.1s; }
+.stagger-children.active > *:nth-child(2) { transition-delay: 0.2s; }
+.stagger-children.active > *:nth-child(3) { transition-delay: 0.3s; }
+.stagger-children.active > *:nth-child(4) { transition-delay: 0.4s; }
+.stagger-children.active > *:nth-child(5) { transition-delay: 0.5s; }
+.stagger-children.active > *:nth-child(6) { transition-delay: 0.6s; }
+
+/* Hover effects */
+.hover-lift {
+  @apply transition-transform duration-300 ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+.hover-scale {
+  @apply transition-transform duration-300 ease-out;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Text gradients */
+.text-gradient {
+  @apply bg-gradient-to-r from-neutral-900 to-neutral-600 bg-clip-text text-transparent;
+}
+
+/* Add this at the end of your CSS file to test */
+.debug-font-light { font-family: 'MGLight', sans-serif; }
+.debug-font-regular { font-family: 'MGRegular', sans-serif; }
+.debug-font-medium { font-family: 'MGMedium', sans-serif; }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+
+/* MARQUE-------------------- */
+/* Add these to your global CSS or create a custom utility in your Tailwind config */
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Pause animation utility */
+.animation-play-state-paused {
+  animation-play-state: paused;
+}
+
+/* Ensure Tailwind animations exist in your config */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% / var(--repeat-count, 4))); }
+}
+
+@keyframes marquee-reverse {
+  from { transform: translateX(calc(-100% / var(--repeat-count, 4))); }
+  to { transform: translateX(0); }
+}
+
+@keyframes marquee-vertical {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(-100% / var(--repeat-count, 4))); }
+}
