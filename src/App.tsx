@@ -9,6 +9,8 @@ import ProjectDetail from './pages/ProjectDetail';
 import Clients from './pages/Clients';
 import Contact from './pages/Contact';
 import About from './pages/About';
+import UploadTest from './pages/UploadTest';
+import UploadProject from './pages/UploadProject';
 
 function App() {
   return (
@@ -18,6 +20,7 @@ function App() {
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/firebaseTest" element={<UploadProject />} />
             <Route path="/services" element={<Services />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/portfolio/:projectId" element={<ProjectDetail />} />

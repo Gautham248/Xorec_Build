@@ -1,67 +1,176 @@
-import React, { useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Award, Calendar, User, Tag } from 'lucide-react';
-
-// This would typically come from an API or database
-const projectsData = {
-  'ferrari-f8-tributo-launch': {
-    title: "Ferrari F8 Tributo Launch",
-    category: "Automotive",
-    client: "Ferrari",
-    year: "2023",
-    description: "An immersive launch campaign that showcased the Ferrari F8 Tributo's revolutionary design and performance capabilities. The project involved multiple shooting locations across Italy, including the iconic Fiorano Circuit.",
-    challenge: "Capture the essence of Ferrari's most powerful V8 supercar while maintaining the brand's luxury appeal and racing heritage.",
-    solution: "We utilized cutting-edge camera technology and innovative shooting techniques to highlight the car's aerodynamic design and performance capabilities. The campaign included both static and dynamic shots, with particular emphasis on the vehicle's distinctive features.",
-    mainImage: "https://images.unsplash.com/photo-1592198084033-aade902d1aae?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1583121274602-3e2820c69888?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-      "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-    ],
-    videoUrl: "https://player.vimeo.com/video/123456789",
-    awards: ["Cannes Lions Gold", "Clio Award"],
-    results: [
-      "Over 50 million views across platforms",
-      "200% increase in test drive requests",
-      "Featured in top automotive publications"
-    ]
-  },
-  'emirates-first-class': {
-    title: "Emirates First Class Experience",
-    category: "Travel",
-    client: "Emirates",
-    year: "2023",
-    description: "A luxurious showcase of Emirates' first-class cabin experience, highlighting the unparalleled comfort and service that defines the airline's premium offering.",
-    challenge: "Demonstrate the exclusive nature and attention to detail of Emirates' first-class service while capturing the emotional appeal of luxury travel.",
-    solution: "Created a cinematic narrative that follows a passenger's journey, utilizing intimate camera work and sophisticated lighting to showcase the premium cabin's features.",
-    mainImage: "https://images.unsplash.com/photo-1540339832862-474599807836?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1517479149777-5f3b1511d5ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-      "https://images.unsplash.com/photo-1517479149777-5f3b1511d5ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
-      "https://images.unsplash.com/photo-1517479149777-5f3b1511d5ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-    ],
-    videoUrl: "https://player.vimeo.com/video/123456789",
-    awards: ["Webby Award"],
-    results: [
-      "40% increase in first-class bookings",
-      "95% positive social media sentiment",
-      "3 industry awards for creative excellence"
-    ]
-  }
-};
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/firebase-config';
 
 const ProjectDetail = () => {
   const { projectId } = useParams();
-  const project = projectsData[projectId as keyof typeof projectsData];
+  const location = useLocation();
+  const [project, setProject] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [videoError, setVideoError] = useState(false);
+  
+  // Get the project title if it was passed via location state
+  const projectTitle = location.state?.projectTitle;
+
+  // Function to validate if a URL is a proper embed URL
+  const isValidEmbedUrl = (url) => {
+    if (!url) return false;
+    
+    // Check for common video embed patterns
+    const patterns = [
+      /^https:\/\/www\.youtube\.com\/embed\//,
+      /^https:\/\/player\.vimeo\.com\/video\//,
+      /^https:\/\/fast\.wistia\.net\/embed\/iframe\//,
+      /^https:\/\/www\.dailymotion\.com\/embed\/video\//,
+      /^https:\/\/drive\.google\.com\/uc\?export=view&id=.*/,  // Google Drive direct view format
+      /^https:\/\/drive\.google\.com\/file\/d\/.*\/preview/     // Google Drive preview format
+    ];
+    
+    return patterns.some(pattern => pattern.test(url));
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    
+    const fetchProject = async () => {
+      try {
+        setLoading(true);
+        let docSnap = null;
+        
+        // First, try to use the project title passed from portfolio page
+        if (projectTitle) {
+          const docRef = doc(db, "Projects", projectTitle);
+          docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setProject({
+              title: projectTitle,
+              category: data.tags || [], // Store all tags as an array
+              client: data.clientName || 'Unknown Client',
+              year: data.year ? data.year.toString() : 'N/A',
+              description: data.overview || '',
+              challenge: data.Challenge || '',
+              solution: data.Solution || '',
+              mainImage: data.photo && data.photo.length > 0 ? data.photo[0] : "/api/placeholder/400/320",
+              gallery: data.photo || [],
+              videoUrl: data.videoURL || '',
+              results: data.ProjectResult || []
+            });
+            
+            return; // Exit early if we found the project
+          }
+        }
+        
+        // If we don't have the title or it didn't work, try to convert projectId to a title
+        // Convert kebab-case back to potential title formats
+        const potentialTitles = [
+          // Try direct conversion to title case
+          projectId.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+          // Try with spaces
+          projectId.replace(/-/g, ' '),
+          // Try capitalized
+          projectId.replace(/-/g, ' ').toUpperCase(),
+          // Try capitalized first letter
+          projectId.charAt(0).toUpperCase() + projectId.slice(1).replace(/-/g, ' '),
+          // Try as is
+          projectId
+        ];
+        
+        // Try each potential title format
+        for (const title of potentialTitles) {
+          const docRef = doc(db, "Projects", title);
+          docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setProject({
+              title: title,
+              category: data.tags || [], // Store all tags as an array
+              client: data.clientName || 'Unknown Client',
+              year: data.year ? data.year.toString() : 'N/A',
+              description: data.overview || '',
+              challenge: data.Challenge || '',
+              solution: data.Solution || '',
+              mainImage: data.photo && data.photo.length > 0 ? data.photo[0] : "/api/placeholder/400/320",
+              gallery: data.photo || [],
+              videoUrl: data.videoURL || '',
+              results: data.ProjectResult || []
+            });
+            
+            return; // Exit if we found a match
+          }
+        }
+        
+        // If we get here, we couldn't find the project
+        setError('Project not found');
+      } catch (err) {
+        console.error("Error fetching project:", err);
+        setError('Failed to load project details');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProject();
+  }, [projectId, projectTitle]);
 
-  if (!project) {
+  // Function to try converting a normal video URL to an embed URL
+  const getEmbedUrl = (url) => {
+    if (!url) return null;
+    
+    // Google Drive - direct view format
+    if (url.includes('drive.google.com/uc?export=view&id=')) {
+      return url; // Already in embed format
+    }
+    
+    // Extract ID from Google Drive file URLs and convert to direct view format
+    const driveFileRegex = /https:\/\/drive\.google\.com\/file\/d\/(.*?)(?:\/view|\/preview)/;
+    const driveMatch = url.match(driveFileRegex);
+    if (driveMatch) {
+      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+    }
+    
+    // YouTube
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+      return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+    }
+    
+    // Vimeo
+    const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?(?:vimeo\.com\/(?:video\/|))(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+    
+    // Return the original URL if no conversion is possible
+    return url;
+  };
+
+  const handleVideoError = () => {
+    setVideoError(true);
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center pt-20">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-red-600 border-r-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading project details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-20">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Project not found</h1>
           <Link to="/portfolio" className="text-red-600 hover:text-red-700">
@@ -110,7 +219,19 @@ const ProjectDetail = () => {
                 </div>
                 <div className="flex items-center">
                   <Tag className="mr-2" size={20} />
-                  {project.category}
+                  <div className="flex flex-wrap gap-2">
+                    {project.category && (
+                      Array.isArray(project.category) ? 
+                        project.category.map((tag, index) => (
+                          <span key={index} className="bg-red-100/20 text-white text-xs px-2 py-1 rounded border border-white/30">
+                            {tag}
+                          </span>
+                        )) : 
+                        <span className="bg-red-100/20 text-white text-xs px-2 py-1 rounded border border-white/30">
+                          {project.category}
+                        </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -118,7 +239,7 @@ const ProjectDetail = () => {
         </div>
 
         <div className="container py-16">
-          {/* Project Overview - Now full width */}
+          {/* Project Overview */}
           <div className="mb-12">
             <h2 className="text-3xl font-bold mb-6">Project Overview</h2>
             <p className="text-gray-700">{project.description}</p>
@@ -138,11 +259,11 @@ const ProjectDetail = () => {
               <p className="text-gray-700">{project.solution}</p>
             </div>
             
-            {/* Project Results - Awards removed */}
+            {/* Project Results */}
             <div className="bg-gray-200 p-6 rounded-lg">
               <h3 className="text-xl font-bold mb-4">Project Results</h3>
               <ul className="space-y-3">
-                {project.results.map((result, index) => (
+                {project.results && project.results.map((result, index) => (
                   <li key={index} className="flex items-start">
                     <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-2" />
                     <span className="text-gray-700">{result}</span>
@@ -152,57 +273,57 @@ const ProjectDetail = () => {
             </div>
           </div>
 
-          {/* Video Section */}
-          <div className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">Project Video</h2>
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <iframe
-                src={project.videoUrl}
-                className="absolute inset-0 w-full h-full"
-                frameBorder="0"
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
-          </div>
-
-          {/* Gallery Section */}
-          <div>
-            <h2 className="text-3xl font-bold mb-8">Project Gallery</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {project.gallery.map((image, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="relative aspect-video rounded-lg overflow-hidden"
-                >
-                  <img
-                    src={image}
-                    alt={`${project.title} - Image ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Awards Section - Moved to its own section if needed */}
-          {/* {project.awards && project.awards.length > 0 && (
-            <div className="mt-16">
-              <h2 className="text-3xl font-bold mb-8">Awards</h2>
-              <div className="flex flex-wrap gap-6">
-                {project.awards.map((award, index) => (
-                  <div key={index} className="flex items-center text-gray-700 bg-gray-50 p-4 rounded-lg">
-                    <Award className="text-red-600 mr-2" size={20} />
-                    {award}
+          {/* Video Section - Only show if videoUrl exists, with proper error handling */}
+          {project.videoUrl && (
+            <div className="mb-16">
+              <h2 className="text-3xl font-bold mb-8">Project Video</h2>
+              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                {videoError || !isValidEmbedUrl(project.videoUrl) ? (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-100">
+                    <div className="text-center p-6">
+                      <Play className="mx-auto mb-4 text-gray-400" size={48} />
+                      <p className="text-gray-600 font-medium">Video cannot be displayed</p>
+                      <p className="text-gray-500 text-sm mt-2">The video URL may be invalid or unsupported.</p>
+                    </div>
                   </div>
+                ) : (
+                  <iframe
+                    src={getEmbedUrl(project.videoUrl)}
+                    className="absolute inset-0 w-full h-full"
+                    frameBorder="0"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    onError={handleVideoError}
+                  ></iframe>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Gallery Section - Only show if there are images */}
+          {project.gallery && project.gallery.length > 0 && (
+            <div>
+              <h2 className="text-3xl font-bold mb-8">Project Gallery</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {project.gallery.map((image, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    viewport={{ once: true }}
+                    className="relative aspect-video rounded-lg overflow-hidden"
+                  >
+                    <img
+                      src={image}
+                      alt={`${project.title} - Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </motion.div>
                 ))}
               </div>
             </div>
-          )} */}
+          )}
         </div>
       </motion.div>
     </div>
