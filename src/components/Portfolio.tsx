@@ -246,12 +246,12 @@
 // export default Portfolio;
 
 
-
 import React, { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import { Play } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase-config';
+import { Link } from 'react-router-dom';
 
 // Define the structure of a project based on your database structure
 interface Project {
@@ -265,6 +265,7 @@ interface Project {
   Challenge: string;
   Solution: string;
   ProjectResult: string[];
+  id?: string; // For routing
 }
 
 // Tag options from the previous upload form
@@ -299,9 +300,13 @@ const Portfolio: React.FC = () => {
         const projectsList: Project[] = [];
         
         projectsSnapshot.forEach((doc) => {
+          // Create a URL-friendly ID from the title
+          const urlId = doc.id.toLowerCase().replace(/\s+/g, '-');
+          
           projectsList.push({ 
             title: doc.id, // Document ID is the title
-            ...doc.data() as Omit<Project, 'title'> 
+            id: urlId, // Add URL-friendly ID for routing
+            ...doc.data() as Omit<Project, 'title' | 'id'> 
           });
         });
         
@@ -468,37 +473,38 @@ const Portfolio: React.FC = () => {
         ) : filteredProjects.length > 0 ? (
           <div ref={projectsContainerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredProjects.map((project, index) => (
-              <div 
+              <Link 
                 key={index}
-                ref={el => projectRefs.current[index] = el}
-                data-index={index}
-                className="project-card group relative overflow-hidden rounded-lg shadow-md"
+                to={`/portfolio/${project.id || project.title.toLowerCase().replace(/\s+/g, '-')}`}
+                state={{ projectTitle: project.title }}
+                className="cursor-pointer"
               >
-                <img 
-                  src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"} 
-                  alt={project.title} 
-                  className="w-full h-80 object-cover transition-transform duration-700 group-hover:scale-110"
-                />
                 <div 
-                  className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${
-                    isMobile 
-                      ? visibleProjects.includes(index) ? 'opacity-100' : 'opacity-0'
-                      : 'opacity-0 group-hover:opacity-100'
-                  }`}
+                  ref={el => projectRefs.current[index] = el}
+                  data-index={index}
+                  className="project-card group relative overflow-hidden rounded-lg shadow-md"
                 >
-                  <h3 className="text-xl font-bold text-white">{project.title}</h3>
-                  <p className="text-gray-200 mb-4">{project.clientName}</p>
-                  {project.videoURL && (
-                    <a 
-                      href={project.videoURL} 
-                      className="inline-flex items-center gap-2 text-neutral-200 hover:text-white transition-colors"
-                    >
+                  <img 
+                    src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"} 
+                    alt={project.title} 
+                    className="w-full h-80 object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div 
+                    className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${
+                      isMobile 
+                        ? visibleProjects.includes(index) ? 'opacity-100' : 'opacity-0'
+                        : 'opacity-0 group-hover:opacity-100'
+                    }`}
+                  >
+                    <h3 className="text-xl font-bold text-white">{project.title}</h3>
+                    <p className="text-gray-200 mb-4">{project.clientName}</p>
+                    <div className="inline-flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
                       <Play size={16} />
-                      <span>Watch Project</span>
-                    </a>
-                  )}
+                      <span>View Project</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
@@ -508,9 +514,9 @@ const Portfolio: React.FC = () => {
         )}
         
         <div className="mt-16 text-center">
-          <a href="#contact" className="btn bg-accent text-white">
+          <Link to="/contact" className="btn bg-accent text-white">
             Discuss Your Project
-          </a>
+          </Link>
         </div>
       </div>
       
