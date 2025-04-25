@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ChevronDown } from 'lucide-react';
 // Import your video
-import ferrariVideo from '../assets/ferraritributo.mp4'; // Adjust path as needed
+// import ferrariVideo from '../assets/ferraritributo.mp4'; // Adjust path as needed
+import xorec_showreel from '../assets/xorec_showreel.mp4'; // Adjust path as needed
 import { TypingAnimation } from './magicui/typing-animation';
 import { HyperText } from './magicui/hyper-text';
 
@@ -79,12 +80,11 @@ const Hero: React.FC = () => {
     <section 
       id="home" 
       ref={heroRef} 
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white"
+      className="relative h-screen flex items-center justify-center overflow-hidden bg-black"
     >
       {/* Video Background */}
       <div className="absolute inset-0 z-0">
-        {/* <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/80 to-white/90 backdrop-blur-sm z-10"></div> */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/50 via-white/40 to-white/50  z-10"></div>
+        {/* Removed the gradient overlays to show video as is */}
         <video 
           ref={videoRef}
           className="w-full h-full object-cover"
@@ -93,7 +93,7 @@ const Hero: React.FC = () => {
           loop 
           playsInline
         >
-          <source src={ferrariVideo} type="video/mp4" />
+          <source src={xorec_showreel} type="video/mp4" />
           {/* Fallback content if video doesn't load */}
           Your browser does not support the video tag.
         </video>
@@ -101,7 +101,7 @@ const Hero: React.FC = () => {
       
       {/* Hero Content */}
       <div className="container relative z-20 text-center px-4">
-        <h1 className="hero-title text-5xl md:text-7xl font-bold mb-6 leading-tight text-black">
+        <h1 className="hero-title text-5xl md:text-7xl font-bold mb-6 leading-tight text-white">
           <div className="overflow-hidden">
             <span className="block">Cinematic</span>
           </div>
@@ -109,15 +109,11 @@ const Hero: React.FC = () => {
             <span className="block">Storytelling</span>
           </div>
           <div className="overflow-hidden">
-            <span className="block text-zinc-800">Redefined</span>
+            <span className="block">Redefined</span>
           </div>
         </h1>
         
-        {/* <p >
-         
-        </p> */}
-        {/* <HyperText  duration={1000} className="hero-subtitle text-xl md:text-2xl text-slate-900 mb-8 max-w-3xl mx-auto"> Award-winning video production trusted by global brands to create impactful visual stories that drive results.</HyperText> */}
-        <div className="hero-subtitle text-xl md:text-2xl text-slate-900 mb-8 max-w-3xl mx-auto">Award-winning video production trusted by global brands to create impactful visual stories that drive results.</div>
+        <div className="hero-subtitle text-xl md:text-2xl text-white mb-8 max-w-3xl mx-auto">Award-winning video production trusted by global brands to create impactful visual stories that drive results.</div>
         <div className="hero-cta flex flex-col sm:flex-row items-center justify-center gap-4">
           <a 
             href="#portfolio" 
@@ -132,12 +128,6 @@ const Hero: React.FC = () => {
             Get in Touch
           </a>
         </div>
-        
-        {/* Scroll Indicator */}
-        {/* <div className="scroll-indicator mt-10 absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center text-black">
-          <span className="text-sm uppercase tracking-widest mt-90">Scroll</span>
-          <ChevronDown size={20} className="animate-bounce" />
-        </div> */}
       </div>
     </section>
   );
