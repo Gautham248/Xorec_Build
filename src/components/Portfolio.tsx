@@ -33,17 +33,17 @@ interface FeaturedProject {
 }
 
 // Tag options from the previous upload form - commented out but preserved
-const categories = [
-  "All", 
-  "Events",
-  "Products",
-  "Launches",
-  "Delivery",
-  "Concerts",
-  "Aviation",
-  "Automotive",
-  "Architecture"
-];
+// const categories = [
+//   "All", 
+//   "Events",
+//   "Products",
+//   "Launches",
+//   "Delivery",
+//   "Concerts",
+//   "Aviation",
+//   "Automotive",
+//   "Architecture"
+// ];
 
 const Portfolio: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -95,7 +95,14 @@ const Portfolio: React.FC = () => {
         const projects = await Promise.all(projectPromises);
         // Filter out projects that don't have an active status
         const activeProjects = projects.filter(project => project.status === 'active');
-        setProjects(activeProjects);
+        setProjects(activeProjects.map(project => ({
+          ...project,
+          overview: '',
+          videoURL: '',
+          Challenge: '',
+          Solution: '',
+          ProjectResult: []
+        })));
       } catch (error) {
         console.error("Error fetching featured projects:", error);
       } finally {
