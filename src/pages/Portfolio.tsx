@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { Play, Award } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { TypingAnimation } from '@/components/magicui/typing-animation';
 import { collection, getDocs, getDocsFromCache, enableIndexedDbPersistence } from 'firebase/firestore';
+import ProjectImage from '@/components/ProjectImage';
 import { db } from '@/firebase-config';
 
 // Define the structure of a project based on your database structure
@@ -129,9 +130,12 @@ const Portfolio = () => {
     fetchProjects();
   }, []);
 
-  // Filter projects based on active category
-  const filteredProjects = projects.filter(project => 
-    activeCategory === "All" || (project.tags && project.tags.includes(activeCategory))
+  // Filter projects based on active category with memoization
+  const filteredProjects = useMemo(() => 
+    projects.filter(project => 
+      activeCategory === "All" || (project.tags && project.tags.includes(activeCategory))
+    ),
+    [projects, activeCategory]
   );
 
   // Check if device is mobile
@@ -344,14 +348,9 @@ const Portfolio = () => {
                       data-index={index}
                       className="project-card group relative overflow-hidden rounded-lg shadow-md"
                     >
-                      <img 
+                      <ProjectImage 
                         src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"} 
                         alt={project.title} 
-                        className="w-full h-80 object-cover transition-transform duration-700 group-hover:scale-110"
-                        loading="lazy" // Lazy-load images
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/api/placeholder/400/320";
-                        }}
                       />
                       <div 
                         className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${

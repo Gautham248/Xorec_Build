@@ -1,9 +1,11 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo, memo } from 'react';
 import { gsap } from 'gsap';
 import { Play } from 'lucide-react';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, enableIndexedDbPersistence } from 'firebase/firestore';
 import { db } from '@/firebase-config';
 import { Link } from 'react-router-dom';
+import ProjectImage from './ProjectImage';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 // Define the structure of a project
 interface Project {
@@ -113,8 +115,24 @@ const Portfolio: React.FC = () => {
     fetchProjects();
   }, []);
   
-  // Use all active featured projects directly without filtering by tags
-  const filteredProjects = projects;
+  // Enable Firestore persistence
+  useEffect(() => {
+    const enablePersistence = async () => {
+      try {
+        await enableIndexedDbPersistence(db);
+      } catch (err: any) {
+        if (err.code === 'failed-precondition') {
+          console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+        } else if (err.code === 'unimplemented') {
+          console.log('The current browser does not support persistence.');
+        }
+      }
+    };
+    enablePersistence();
+  }, []);
+
+  // Memoize filtered projects
+  const filteredProjects = useMemo(() => projects, [projects]);
   
   // Check if device is mobile
   useEffect(() => {
@@ -209,7 +227,7 @@ const Portfolio: React.FC = () => {
   }, [activeCategory]);
 
   return (
-    <section id="portfolio" ref={sectionRef} className="py-24 bg-white">
+<section id="portfolio" ref={sectionRef} className="py-24 bg-white">
       <div className="container">
         <div className="text-center mb-16">
           <h2 className="portfolio-title section-title text-black">
@@ -228,41 +246,50 @@ const Portfolio: React.FC = () => {
             <p className="mt-4 text-gray-600">Loading projects...</p>
           </div>
         ) : filteredProjects.length > 0 ? (
-          <div ref={projectsContainerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {filteredProjects.map((project, index) => (
-              <Link 
-                key={index}
-                to={`/portfolio/${project.id || project.title.toLowerCase().replace(/\s+/g, '-')}`}
-                state={{ projectTitle: project.title }}
-                className="cursor-pointer"
-              >
-                <div 
-                  ref={el => projectRefs.current[index] = el}
-                  data-index={index}
-                  className="project-card group relative overflow-hidden rounded-lg shadow-md"
-                >
-                  <img 
-                    src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"} 
-                    alt={project.title} 
-                    className="w-full h-80 object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div 
-                    className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${
-                      isMobile 
-                        ? visibleProjects.includes(index) ? 'opacity-100' : 'opacity-0'
-                        : 'opacity-0 group-hover:opacity-100'
-                    }`}
+          <div ref={projectsContainerRef} className="h-[800px] overflow-auto">
+            <div
+              style={{
+                height: `${filteredProjects.length * 320}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {filteredProjects.map((project, index) => (
+                  <Link 
+                    key={index}
+                    to={`/portfolio/${project.id || project.title.toLowerCase().replace(/\s+/g, '-')}`}
+                    state={{ projectTitle: project.title }}
+                    className="cursor-pointer"
                   >
-                    <h3 className="text-xl font-bold text-white">{project.title}</h3>
-                    <p className="text-gray-200 mb-4">{project.clientName}</p>
-                    <div className="inline-flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
-                      <Play size={16} />
-                      <span>View Project</span>
+                    <div 
+                      ref={el => projectRefs.current[index] = el}
+                      data-index={index}
+                      className="project-card group relative overflow-hidden rounded-lg shadow-md"
+                    >
+                      <ProjectImage 
+                        src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"} 
+                        alt={project.title} 
+                      />
+                      <div 
+                        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${
+                          isMobile 
+                            ? visibleProjects.includes(index) ? 'opacity-100' : 'opacity-0'
+                            : 'opacity-0 group-hover:opacity-100'
+                        }`}
+                      >
+                        <h3 className="text-xl font-bold text-white">{project.title}</h3>
+                        <p className="text-gray-200 mb-4">{project.clientName}</p>
+                        <div className="inline-flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
+                          <Play size={16} />
+                          <span>View Project</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="text-center py-12">
@@ -275,13 +302,13 @@ const Portfolio: React.FC = () => {
             Discuss Your Project
           </Link>
         </div>
+        
+        {isMobile && filteredProjects.length > 0 && (
+          <div className="text-center mt-6 text-sm text-gray-500">
+            <p>Scroll to view project details</p>
+          </div>
+        )}
       </div>
-      
-      {isMobile && filteredProjects.length > 0 && (
-        <div className="text-center mt-6 text-sm text-gray-500">
-          <p>Scroll to view project details</p>
-        </div>
-      )}
     </section>
   );
 };
