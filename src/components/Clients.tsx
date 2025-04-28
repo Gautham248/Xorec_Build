@@ -135,7 +135,7 @@ const Clients: React.FC = () => {
             pauseOnHover 
             scrollable={true} 
             scrollSpeed={80} 
-            className="[--duration:60s]"
+            className="[--duration:13s]"
           > 
             {firstRow.map((client) => (
               <ClientCard key={client.name} name={client.name} logo={client.logo} />
@@ -148,7 +148,7 @@ const Clients: React.FC = () => {
             pauseOnHover 
             scrollable={true}
             scrollSpeed={80}
-            className="[--duration:50s] mt-4"
+            className="[--duration:13s] mt-4"
           > 
             {secondRow.map((client) => (
               <ClientCard key={client.name} name={client.name} logo={client.logo} />

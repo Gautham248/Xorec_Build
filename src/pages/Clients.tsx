@@ -178,7 +178,7 @@ const Clients = () => {
                     className="w-48 h-24 object-contain group-hover:scale-110 transition-transform duration-300"
                   />
                 </div>
-                <span className="text-sm text-gray-500 mt-2">{client.name}</span>
+                {/* <span className="text-sm text-gray-500 mt-2">{client.name}</span> */}
               </motion.div>
             ))}
           </div>

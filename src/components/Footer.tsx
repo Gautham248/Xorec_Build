@@ -42,24 +42,25 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg text-white  mb-6">Services</h3>
             <ul className="space-y-3">
-              <li><a href="#services" className="text-gray-400 hover:text-red-600 transition-colors">Cinematic Campaigns</a></li>
-              <li><a href="#services" className="text-gray-400 hover:text-red-600 transition-colors">Automotive Storytelling</a></li>
-              <li><a href="#services" className="text-gray-400 hover:text-red-600 transition-colors">Corporate Events</a></li>
-              <li><a href="#services" className="text-gray-400 hover:text-red-600 transition-colors">Aerial Cinematography</a></li>
-              <li><a href="#services" className="text-gray-400 hover:text-red-600 transition-colors">E-Commerce Films</a></li>
-              <li><a href="#services" className="text-gray-400 hover:text-red-600 transition-colors">Post-Production</a></li>
+            <li className="text-gray-400 hover:text-red-600 transition-colors">Cinematic Campaigns</li>
+            <li className="text-gray-400 hover:text-red-600 transition-colors">Automotive Storytelling</li>
+            <li className="text-gray-400 hover:text-red-600 transition-colors">Corporate Events</li>
+            <li className="text-gray-400 hover:text-red-600 transition-colors">Aerial Cinematography</li>
+            <li className="text-gray-400 hover:text-red-600 transition-colors">E-Commerce Films</li>
+            <li className="text-gray-400 hover:text-red-600 transition-colors">Post-Production</li>
+
             </ul>
           </div>
           
           <div>
             <h3 className="text-lg text-white  mb-6">Company</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-400 hover:text-red-600 transition-colors">About Us</a></li>
-              <li><a href="#portfolio" className="text-gray-400 hover:text-red-600 transition-colors">Portfolio</a></li>
-              <li><a href="#clients" className="text-gray-400 hover:text-red-600 transition-colors">Clients</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-red-600 transition-colors">Services</a></li>
+              <li><a href="/about" className="text-gray-400 hover:text-red-600 transition-colors">About Us</a></li>
+              <li><a href="/portfolio" className="text-gray-400 hover:text-red-600 transition-colors">Portfolio</a></li>
+              <li><a href="/clients" className="text-gray-400 hover:text-red-600 transition-colors">Clients</a></li>
+              <li><a href="/services" className="text-gray-400 hover:text-red-600 transition-colors">Services</a></li>
               {/* <li><a href="#" className="text-gray-400 hover:text-red-600 transition-colors">Blog</a></li> */}
-              <li><a href="#contact" className="text-gray-400 hover:text-red-600 transition-colors">Contact</a></li>
+              <li><a href="/contact" className="text-gray-400 hover:text-red-600 transition-colors">Contact</a></li>
             </ul>
           </div>
           

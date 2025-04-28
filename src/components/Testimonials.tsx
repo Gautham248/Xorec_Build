@@ -102,11 +102,11 @@ const Testimonials: React.FC = () => {
             </blockquote>
             
             <div className="flex items-center">
-              <img 
+              {/* <img 
                 src={testimonials[currentIndex].image} 
                 alt={testimonials[currentIndex].author} 
                 className="w-16 h-16 rounded-full object-cover mr-4"
-              />
+              /> */}
               <div>
                 <p className="font-bold text-lg text-black">{testimonials[currentIndex].author}</p>
                 <p className="text-accent">{testimonials[currentIndex].position}</p>

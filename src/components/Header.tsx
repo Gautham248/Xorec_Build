@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
-// import xoreclogo from '../assets/Xorec_logo.png';
+import xoreclogo from '../assets/Xorec_logo.svg';
 
 import { ScrollProgress } from './magicui/scroll-progress';
 
@@ -37,15 +37,18 @@ const Header: React.FC = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-white shadow-lg py-3' : 'bg-transparent py-6'
-        }`}
+     className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      isScrolled ? 'bg-white shadow-lg py-1.5' : 'bg-transparent py-2'
+    }`}
+    
       >
         <div className="container relative flex items-center justify-between px-4">
           {/* Logo - positioned differently for mobile vs desktop */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold tracking-tighter text-neutral-900">XOREC</span>
+              {/* Replaced text with the imported logo */}
+              {/* <img src={xoreclogo} alt="XOREC Logo" className="h-8" /> */}
+              <img src={xoreclogo} alt="XOREC Logo" className="h-12 md:h-16 sm:h-12" />
             </Link>
           </div>
 
@@ -173,7 +176,7 @@ const Header: React.FC = () => {
       
       <div className="z-10 rounded-lg">
         <ScrollProgress 
-          className={isMobile ? "top-[55px]" : "top-[60px]"}
+          className={isMobile ? "top-[60px]" : "top-[75px]"}
         />
         <h2 className="font-bold">
           {/* Note: The scroll progress is shown below the navbar of the page. */}
