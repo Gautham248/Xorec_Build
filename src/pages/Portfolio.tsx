@@ -7,8 +7,9 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { TypingAnimation } from '@/components/magicui/typing-animation';
-import { collection, getDocs, getDocsFromCache, enableIndexedDbPersistence } from 'firebase/firestore';
-import ProjectImage from '@/components/ProjectImage';
+import { where } from 'firebase/firestore';
+import { OptimizedImage } from '@/components/OptimizedImage';
+import { useFirebaseQuery } from '@/hooks/useFirebaseQuery';
 import { db } from '@/firebase-config';
 
 // Define the structure of a project based on your database structure
@@ -49,7 +50,6 @@ const categories = [
 
 const Portfolio = () => {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [visibleProjects, setVisibleProjects] = useState<number[]>([]);
   const [isMobile, setIsMobile] = useState(false);
@@ -59,84 +59,50 @@ const Portfolio = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Enable Firestore persistence
+  // Use the custom hook for fetching projects
+  const { data: projectsData, loading, error } = useFirebaseQuery(
+    'Projects',
+    [where('status', '==', 'active')],
+    { cacheKey: 'active-projects', enabled: true }
+  );
+
+  // Update projects state when data changes
   useEffect(() => {
-    const enablePersistence = async () => {
-      try {
-        await enableIndexedDbPersistence(db);
-      } catch (err: any) {
-        if (err.code === 'failed-precondition') {
-          console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-        } else if (err.code === 'unimplemented') {
-          console.log('The current browser does not support persistence.');
-        }
-      }
-    };
-    enablePersistence();
-  }, []);
-
-  // Fetch projects from Firestore with caching
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoading(true);
-        const projectsCollection = collection(db, "Projects");
-
-        // Try cached data first
-        const cachedSnapshot = await getDocsFromCache(projectsCollection);
-        const projectsList: Project[] = [];
-
-        if (!cachedSnapshot.empty) {
-          console.log('Serving projects from cache');
-          cachedSnapshot.forEach((doc) => {
-            const urlId = doc.id.toLowerCase().replace(/\s+/g, '-');
-            const projectData = doc.data();
-            if (projectData.status === 'active') {
-              projectsList.push({ 
-                title: doc.id,
-                id: urlId,
-                status: 'active',
-                ...projectData as Omit<Project, 'title' | 'id' | 'status'>
-              });
-            }
-          });
-          setProjects(projectsList);
-        }
-
-        // Fetch fresh data from server
-        const serverSnapshot = await getDocs(projectsCollection);
-        console.log('Serving projects from server');
-        const updatedProjectsList: Project[] = [];
-        serverSnapshot.forEach((doc) => {
-          const urlId = doc.id.toLowerCase().replace(/\s+/g, '-');
-          const projectData = doc.data();
-          if (projectData.status === 'active') {
-            updatedProjectsList.push({ 
-              title: doc.id,
-              id: urlId,
-              status: 'active',
-              ...projectData as Omit<Project, 'title' | 'id' | 'status'>
-            });
-          }
-        });
-        setProjects(updatedProjectsList);
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!projectsData) return;
     
-    fetchProjects();
-  }, []);
+    const formattedProjects = projectsData.map(project => ({
+      ...project,
+      id: project.title.toLowerCase().replace(/\s+/g, '-'),
+      status: 'active'
+    }));
+    setProjects(formattedProjects);
+    
+    return () => {
+      setProjects([]);
+      setVisibleProjects([]);
+    };
+  }, [projectsData]);
 
   // Filter projects based on active category with memoization
-  const filteredProjects = useMemo(() => 
-    projects.filter(project => 
+  const filteredProjects = useMemo(() => {
+    if (!projects) return [];
+    return projects.filter(project => 
       activeCategory === "All" || (project.tags && project.tags.includes(activeCategory))
-    ),
-    [projects, activeCategory]
-  );
+    );
+  }, [projects, activeCategory]);
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="pt-20">
+        <section className="bg-white py-24">
+          <div className="container text-center">
+            <p className="text-red-500">Error loading projects: {error.toString()}</p>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   // Check if device is mobile
   useEffect(() => {
@@ -339,7 +305,7 @@ const Portfolio = () => {
                 {filteredProjects.map((project, index) => (
                   <Link 
                     key={index}
-                    to={`/portfolio/${project.id || project.title.toLowerCase().replace(/\s+/g, '-')}`}
+                    to={`/portfolio/${project.id || (project.title ? project.title.toLowerCase().replace(/\s+/g, '-') : 'untitled')}`}
                     state={{ projectTitle: project.title }}
                     className="cursor-pointer"
                   >
@@ -348,9 +314,10 @@ const Portfolio = () => {
                       data-index={index}
                       className="project-card group relative overflow-hidden rounded-lg shadow-md"
                     >
-                      <ProjectImage 
+                      <OptimizedImage 
                         src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"} 
-                        alt={project.title} 
+                        alt={project.title}
+                        className="w-full h-full object-cover"
                       />
                       <div 
                         className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${
