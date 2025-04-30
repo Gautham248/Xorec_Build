@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap } from 'gsap';
+import { gsap, ScrollTrigger } from '@/utils/gsap-config';
 import { ChevronDown } from 'lucide-react';
 import { TypingAnimation } from './magicui/typing-animation';
 import { HyperText } from './magicui/hyper-text';
@@ -56,7 +56,10 @@ const Hero: React.FC = () => {
           duration: 1.5, 
           stagger: 0.1, 
           ease: 'power4.out',
-          delay: 0.5
+          scrollTrigger: {
+            trigger: '.hero-title',
+            start: 'top 80%',
+          }
         }
       );
       
@@ -67,8 +70,11 @@ const Hero: React.FC = () => {
         { 
           opacity: 1, 
           y: 0, 
-          duration: 1, 
-          delay: 1.2 
+          duration: 1,
+          scrollTrigger: {
+            trigger: '.hero-subtitle',
+            start: 'top 75%',
+          }
         }
       );
       
@@ -79,8 +85,11 @@ const Hero: React.FC = () => {
         { 
           opacity: 1, 
           y: 0, 
-          duration: 1, 
-          delay: 1.5 
+          duration: 1,
+          scrollTrigger: {
+            trigger: '.hero-cta',
+            start: 'top 75%',
+          }
         }
       );
       
@@ -90,11 +99,14 @@ const Hero: React.FC = () => {
         { opacity: 0 },
         { 
           opacity: 1, 
-          duration: 1, 
-          delay: 2,
+          duration: 1,
           yoyo: true,
           repeat: -1,
-          repeatDelay: 1
+          repeatDelay: 1,
+          scrollTrigger: {
+            trigger: '.scroll-indicator',
+            start: 'top 90%',
+          }
         }
       );
     }, heroRef);
@@ -137,11 +149,16 @@ const Hero: React.FC = () => {
           
           <iframe
             className="absolute w-full h-full pointer-events-none"
-            src="https://www.youtube.com/embed/LM2L0iX11do?autoplay=1&mute=1&controls=0&loop=1&playlist=LM2L0iX11do&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&enablejsapi=1&playsinline=1&fs=0"
+            src="https://www.youtube-nocookie.com/embed/LM2L0iX11do?autoplay=1&mute=1&controls=0&loop=1&playlist=LM2L0iX11do&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&playsinline=1&fs=0"
             title="Cinematic Video Background"
             frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
             allowFullScreen={false}
+            loading="lazy"
+            onError={(e) => {
+              const iframe = e.target as HTMLIFrameElement;
+              iframe.style.display = 'none';
+            }}
           ></iframe>
         </div>
       </div>

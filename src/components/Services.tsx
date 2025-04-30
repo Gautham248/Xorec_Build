@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { gsap } from 'gsap';
+import { gsap, ScrollTrigger } from '@/utils/gsap-config';
 import { Film, Camera, Video, Plane, ShoppingBag, Users } from 'lucide-react';
 import { BorderBeam } from './magicui/border-beam';
 import { MagicCard } from './magicui/magic-card';

@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 import { collection, getDocs, doc, getDoc, enableIndexedDbPersistence } from 'firebase/firestore';
 import { db } from '@/firebase-config';
 import { Link } from 'react-router-dom';
-import ProjectImage from './ProjectImage';
+import { ResponsiveImage } from './ResponsiveImage';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 // Define the structure of a project
@@ -267,9 +267,11 @@ const Portfolio: React.FC = () => {
                       data-index={index}
                       className="project-card group relative overflow-hidden rounded-lg shadow-md"
                     >
-                      <ProjectImage 
-                        src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"} 
-                        alt={project.title} 
+                      <ResponsiveImage
+                        src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"}
+                        alt={project.title}
+                        sizes="(max-width: 768px) 100vw, 25vw"
+                        className="w-full h-80 transition-transform duration-700 group-hover:scale-110"
                       />
                       <div 
                         className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${

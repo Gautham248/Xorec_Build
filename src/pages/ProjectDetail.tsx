@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Calendar, User, Tag, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase-config';
+import { ResponsiveImage } from '@/components/ResponsiveImage';
 
 interface Project {
   title: string;
@@ -657,10 +658,12 @@ const ProjectDetail: React.FC = () => {
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <img
+              <ResponsiveImage
                 src={project.gallery[currentImageIndex]}
                 alt={`${project.title} - Image ${currentImageIndex + 1}`}
                 className="max-w-full max-h-full object-contain transition-transform duration-200"
+                priority={true}
+                sizes="(max-width: 768px) 100vw, 90vw"
                 style={{ 
                   transform: `scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
                 }}
