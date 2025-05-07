@@ -33,6 +33,7 @@ import Toyota from '../assets/XOREC-LOGO/Toyota.svg';
 import UST from '../assets/XOREC-LOGO/UST global.svg';
 import VaynerMedia from '../assets/XOREC-LOGO/Vayner Media.svg';
 import Zomato from '../assets/XOREC-LOGO/Zomato.svg';
+import Harley from '../assets/XOREC-LOGO/Harley Davidson.svg';
 
 const stats = [
   { icon: <Star size={24} />, value: "50+", label: "Global Brands" },
@@ -70,7 +71,8 @@ const clients = [
   { name: 'Toyota', logo: Toyota, industry: 'Automotive' },
   { name: 'UST Global', logo: UST, industry: 'Technology' },
   { name: 'Vayner Media', logo: VaynerMedia, industry: 'Media' },
-  { name: 'Zomato', logo: Zomato, industry: 'Food Delivery' }
+  { name: 'Zomato', logo: Zomato, industry: 'Food Delivery' },
+  { name: 'Harley Davidson', logo: Harley, industry: 'Automotive' }
 ];
 
 const testimonials = [
@@ -207,7 +209,7 @@ const Clients = () => {
                   </div>
                 </div>
                 <blockquote className="text-gray-700 italic">
-                  "{testimonial.quote}"
+                  {testimonial.quote}
                 </blockquote>
               </motion.div>
             ))}

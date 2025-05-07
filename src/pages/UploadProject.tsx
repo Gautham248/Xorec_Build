@@ -52,6 +52,7 @@ interface CSVProjectData {
 const TAG_OPTIONS = [
   'Events',
   'Products',
+  'Films',
   'Launches',
   'Delivery',
   'Concerts',

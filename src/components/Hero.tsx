@@ -189,7 +189,7 @@ const Hero: React.FC = () => {
             View Our Work
           </a>
           <a 
-            href="#contact" 
+            href="/contact" 
             className="btn btn-secondary px-6 py-3 rounded font-medium border border-white text-white"
           >
             Get in Touch

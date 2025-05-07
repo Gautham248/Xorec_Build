@@ -2,6 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { Users, Target, Award, Clock } from 'lucide-react';
+import eby from '@/assets/Team/EBY.png';
+import vishak from '@/assets/Team/VISHAK.png';
+import nithin from '@/assets/Team/NITHIN.png';
 
 const About = () => {
   const sectionRef = useRef<HTMLElement>(null);
@@ -17,19 +20,19 @@ const About = () => {
     {
       name: "Eby Eldho Ealiyas",
       position: "CEO",
-      image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      image: "https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/TEAM/EBY.png?updatedAt=1746546867702",
       bio: "With over 7 years of industry experience, Eby leads our brand's strategic direction, driving Xorec towards its vision."
     },
     {
       name: "Nithin Nambiar",
       position: "CCO",
-      image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      image: "https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/TEAM/NITHIN.png?updatedAt=1746546867736",
       bio: "Nithin brings our creative vision to life and driving innovation across every project he oversees."
     },
     {
       name: "Vishak",
       position: "CTO",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      image: "https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/TEAM/VISHAK.png?updatedAt=1746546867720",
       bio: "Vishak specializes in cutting-edge cinematography and visual effects supervision."
     }
   ];

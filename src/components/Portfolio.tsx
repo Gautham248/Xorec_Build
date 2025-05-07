@@ -1,11 +1,10 @@
-import React, { useRef, useEffect, useState, useMemo, memo } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { Play } from 'lucide-react';
-import { collection, getDocs, doc, getDoc, enableIndexedDbPersistence } from 'firebase/firestore';
+import { collection, getDocs, enableIndexedDbPersistence } from 'firebase/firestore';
 import { db } from '@/firebase-config';
 import { Link } from 'react-router-dom';
 import { ResponsiveImage } from './ResponsiveImage';
-import { useVirtualizer } from '@tanstack/react-virtual';
 
 // Define the structure of a project
 interface Project {
@@ -33,19 +32,6 @@ interface FeaturedProject {
   addedAt: any; // Firebase timestamp
   status: 'active' | 'disabled';
 }
-
-// Tag options from the previous upload form - commented out but preserved
-// const categories = [
-//   "All", 
-//   "Events",
-//   "Products",
-//   "Launches",
-//   "Delivery",
-//   "Concerts",
-//   "Aviation",
-//   "Automotive",
-//   "Architecture"
-// ];
 
 const Portfolio: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -227,8 +213,8 @@ const Portfolio: React.FC = () => {
   }, [activeCategory]);
 
   return (
-<section id="portfolio" ref={sectionRef} className="py-24 bg-white">
-      <div className="container">
+    <section id="portfolio" ref={sectionRef} className="py-24 bg-white">
+      <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="portfolio-title section-title text-black">
             <div className="overflow-hidden">
@@ -246,51 +232,43 @@ const Portfolio: React.FC = () => {
             <p className="mt-4 text-gray-600">Loading projects...</p>
           </div>
         ) : filteredProjects.length > 0 ? (
-          <div ref={projectsContainerRef} className="h-[800px] overflow-auto">
-            <div
-              style={{
-                height: `${filteredProjects.length * 320}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {filteredProjects.map((project, index) => (
-                  <Link 
-                    key={index}
-                    to={`/portfolio/${project.id || project.title.toLowerCase().replace(/\s+/g, '-')}`}
-                    state={{ projectTitle: project.title }}
-                    className="cursor-pointer"
+          <div ref={projectsContainerRef}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {filteredProjects.map((project, index) => (
+                <Link 
+                  key={index}
+                  to={`/portfolio/${project.id || project.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  state={{ projectTitle: project.title }}
+                  className="cursor-pointer"
+                >
+                  <div 
+                    ref={el => projectRefs.current[index] = el}
+                    data-index={index}
+                    className="project-card group relative overflow-hidden rounded-lg shadow-md h-80"
                   >
+                    <ResponsiveImage
+                      src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"}
+                      alt={project.title}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
                     <div 
-                      ref={el => projectRefs.current[index] = el}
-                      data-index={index}
-                      className="project-card group relative overflow-hidden rounded-lg shadow-md"
+                      className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${
+                        isMobile 
+                          ? visibleProjects.includes(index) ? 'opacity-100' : 'opacity-0'
+                          : 'opacity-0 group-hover:opacity-100'
+                      }`}
                     >
-                      <ResponsiveImage
-                        src={project.photo && project.photo.length > 0 ? project.photo[0] : "/api/placeholder/400/320"}
-                        alt={project.title}
-                        sizes="(max-width: 768px) 100vw, 25vw"
-                        className="w-full h-80 transition-transform duration-700 group-hover:scale-110"
-                      />
-                      <div 
-                        className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-6 transition-opacity duration-300 ${
-                          isMobile 
-                            ? visibleProjects.includes(index) ? 'opacity-100' : 'opacity-0'
-                            : 'opacity-0 group-hover:opacity-100'
-                        }`}
-                      >
-                        <h3 className="text-xl font-bold text-white">{project.title}</h3>
-                        <p className="text-gray-200 mb-4">{project.clientName}</p>
-                        <div className="inline-flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
-                          <Play size={16} />
-                          <span>View Project</span>
-                        </div>
+                      <h3 className="text-xl font-bold text-white">{project.title}</h3>
+                      <p className="text-gray-200 mb-4">{project.clientName}</p>
+                      <div className="inline-flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
+                        <Play size={16} />
+                        <span>View Project</span>
                       </div>
                     </div>
-                  </Link>
-                ))}
-              </div>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         ) : (
@@ -300,16 +278,10 @@ const Portfolio: React.FC = () => {
         )}
         
         <div className="mt-16 text-center">
-          <Link to="/contact" className="btn bg-accent text-white">
+          <Link to="/contact" className="btn bg-accent text-white hover:bg-accent/90 transition-colors px-6 py-3 rounded-md">
             Discuss Your Project
           </Link>
         </div>
-        
-        {isMobile && filteredProjects.length > 0 && (
-          <div className="text-center mt-6 text-sm text-gray-500">
-            <p>Scroll to view project details</p>
-          </div>
-        )}
       </div>
     </section>
   );

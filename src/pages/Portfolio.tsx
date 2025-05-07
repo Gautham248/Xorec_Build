@@ -39,6 +39,7 @@ const categories = [
   "All", 
   "Events",
   "Products",
+  "Films",
   "Launches",
   "Delivery",
   "Concerts",
@@ -159,8 +160,8 @@ const Portfolio = () => {
     
     const observerOptions = {
       root: null,
-      rootMargin: '0px',
-      threshold: 0.3, // Lowered threshold for faster visibility
+      rootMargin: '50px',
+      threshold: [0.15, 0.3, 0.5], // Multiple thresholds for smoother transitions
     };
     
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
@@ -205,21 +206,26 @@ const Portfolio = () => {
         }
       );
       
-      gsap.fromTo(
-        '.award-card',
-        { scale: 0.8, opacity: 0 },
-        {
-          scale: 1,
-          opacity: 1,
-          duration: 0.6,
-          stagger: 0.1,
-          ease: 'back.out(1.7)',
-          scrollTrigger: {
-            trigger: '.awards-section',
-            start: 'top 75%',
-          }
+      // Ensure awards animate in sync with a more controlled timing
+      const awardCards = gsap.utils.toArray('.award-card');
+      gsap.set(awardCards, { scale: 0.8, opacity: 0 });
+      
+      gsap.to(awardCards, {
+        scale: 1,
+        opacity: 1,
+        duration: 0.4,
+        stagger: {
+          each: 0.1,
+          from: "start",
+          grid: "auto"
+        },
+        ease: 'back.out(1.5)',
+        scrollTrigger: {
+          trigger: '.awards-section',
+          start: 'top 75%',
+          once: true
         }
-      );
+      });
       
       gsap.fromTo(
         '.filter-btn',
@@ -335,7 +341,7 @@ const Portfolio = () => {
                 <p className="mt-4 text-gray-600">Loading projects...</p>
               </div>
             ) : filteredProjects.length > 0 ? (
-              <div ref={projectsContainerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div ref={projectsContainerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredProjects.map((project, index) => (
                   <Link 
                     key={index}

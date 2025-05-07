@@ -11,7 +11,8 @@ const ProjectImage: React.FC<ProjectImageProps> = ({ src, alt }) => {
   return (
     <div className="relative w-full h-80">
       <img 
-        src={src} 
+        src={`${src}?tr=w-300`}
+        // src={src} 
         alt={alt}
         loading="lazy"
         onLoad={() => setImageLoaded(true)}

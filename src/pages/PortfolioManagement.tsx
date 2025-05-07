@@ -38,6 +38,7 @@ const PortfolioManagement: React.FC = () => {
     "All", 
     "Events",
     "Products",
+    "Films",
     "Launches",
     "Delivery",
     "Concerts",

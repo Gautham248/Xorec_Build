@@ -115,7 +115,7 @@ const Process: React.FC = () => {
         </div>
         
         <div className="mt-16 text-center">
-          <a href="#contact" className="btn bg-accent text-white">
+          <a href="/contact" className="btn bg-accent text-white">
             Start Your Project
           </a>
         </div>

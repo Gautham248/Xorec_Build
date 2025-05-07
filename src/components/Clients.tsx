@@ -35,6 +35,7 @@ import Toyota from '../assets/XOREC-LOGO/Toyota.svg';
 import UST from '../assets/XOREC-LOGO/UST global.svg';
 import VaynerMedia from '../assets/XOREC-LOGO/Vayner Media.svg';
 import Zomato from '../assets/XOREC-LOGO/Zomato.svg';
+import Harley from '../assets/XOREC-LOGO/Harley Davidson.svg';
 
 const clients = [
   { name: 'Ferrari', logo: ferrariLogo },
@@ -63,7 +64,8 @@ const clients = [
   { name: 'Toyota', logo: Toyota },
   { name: 'UST Global', logo: UST },
   { name: 'Vayner Media', logo: VaynerMedia },
-  { name: 'Zomato', logo: Zomato }
+  { name: 'Zomato', logo: Zomato },
+  { name: 'Harley', logo: Harley }
 ];
 
 // Divide clients into two rows for the marquee
@@ -162,7 +164,7 @@ const Clients: React.FC = () => {
         
         <div className="mt-16 text-center">
           <p className="text-gray-700 mb-6">Join over 100+ global brands who trust Xorec with their visual storytelling</p>
-          <a href="#contact" className="btn bg-accent text-white">
+          <a href="/contact" className="btn bg-accent text-white">
             Become Our Client
           </a>
         </div>

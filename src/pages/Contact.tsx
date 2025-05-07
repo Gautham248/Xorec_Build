@@ -192,11 +192,12 @@ const Contact = () => {
                       <option value="Aerial Cinematography">Aerial Cinematography</option>
                       <option value="E-Commerce Films">E-Commerce Films</option>
                       <option value="Post-Production">Post-Production</option>
+                      <option value="Custom Requirement">Other</option>
                     </select>
                   </div>
                 </div>
 
-                <div>
+                {/* <div>
                   <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-2">
                     Budget Range
                   </label>
@@ -213,7 +214,7 @@ const Contact = () => {
                     <option value="50k-100k">$50,000 - $100,000</option>
                     <option value="100k+">$100,000+</option>
                   </select>
-                </div>
+                </div> */}
 
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
@@ -316,12 +317,12 @@ const Contact = () => {
           </div>
 
           {/* Map Section */}
-          <div className="rounded-lg overflow-hidden shadow-lg h-96 bg-gray-100">
-            {/* Add your map component here */}
+          {/* <div className="rounded-lg overflow-hidden shadow-lg h-96 bg-gray-100">
+             Add your map component here 
             <div className="w-full h-full flex items-center justify-center text-gray-500">
               Interactive Map Coming Soon
             </div>
-          </div>
+          </div> */}
         </motion.div>
       </section>
     </div>
