@@ -1032,7 +1032,7 @@ const PortfolioManagement: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2">
                           {tags.map(tag => (
                             <div key={tag.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                              <span className="text-gray-700">{tag.id} ({tag.count})</span>
+                              <span className="text-gray-700">{tag.id}</span>
                               <button
                                 onClick={() => prepareDeleteTag(tag.id)}
                                 className="text-red-600 hover:text-red-800"
