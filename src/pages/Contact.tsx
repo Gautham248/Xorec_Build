@@ -305,10 +305,10 @@ const Contact = () => {
                         <Mail size={18} className="mr-2" />
                         <span>{office.email}</span>
                       </div>
-                      <div className="flex items-center text-gray-600">
+                      {/* <div className="flex items-center text-gray-600">
                         <Clock size={18} className="mr-2" />
                         <span>{office.timezone}</span>
-                      </div>
+                      </div> */}
                     </div>
                   </motion.div>
                 ))}

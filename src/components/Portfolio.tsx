@@ -233,7 +233,7 @@ const Portfolio: React.FC = () => {
           </div>
         ) : filteredProjects.length > 0 ? (
           <div ref={projectsContainerRef}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
               {filteredProjects.map((project, index) => (
                 <Link 
                   key={index}

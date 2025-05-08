@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
@@ -7,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { TypingAnimation } from '@/components/magicui/typing-animation';
-import { collection, getDocs, getDocsFromCache, enableIndexedDbPersistence } from 'firebase/firestore';
+import { collection, getDocs, getDocsFromCache, enableIndexedDbPersistence, query, orderBy } from 'firebase/firestore';
 import ProjectImage from '@/components/ProjectImage';
 import { db } from '@/firebase-config';
 
@@ -24,7 +23,8 @@ interface Project {
   Solution: string;
   ProjectResult: string[];
   id?: string;
-  status: 'active' | 'disabled';
+  status?: 'active' | 'disabled';
+  displayOrder?: number;
 }
 
 const awards = [
@@ -51,6 +51,7 @@ const categories = [
 const Portfolio = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("All");
   const [visibleProjects, setVisibleProjects] = useState<number[]>([]);
   const [isMobile, setIsMobile] = useState(false);
@@ -66,11 +67,7 @@ const Portfolio = () => {
       try {
         await enableIndexedDbPersistence(db);
       } catch (err: any) {
-        if (err.code === 'failed-precondition') {
-          console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-        } else if (err.code === 'unimplemented') {
-          console.log('The current browser does not support persistence.');
-        }
+        console.warn('Persistence error:', err.code, err.message);
       }
     };
     enablePersistence();
@@ -81,48 +78,79 @@ const Portfolio = () => {
     const fetchProjects = async () => {
       try {
         setLoading(true);
+        setError(null);
         const projectsCollection = collection(db, "Projects");
 
-        // Try cached data first
-        const cachedSnapshot = await getDocsFromCache(projectsCollection);
-        const projectsList: Project[] = [];
+        // Try query with ordering by displayOrder and year
+        const q = query(
+          projectsCollection,
+          orderBy("displayOrder", "asc"),
+          orderBy("year", "desc")
+        );
 
-        if (!cachedSnapshot.empty) {
-          console.log('Serving projects from cache');
-          cachedSnapshot.forEach((doc) => {
+        // Process snapshot helper function
+        const processSnapshot = (snapshot: any, source: string) => {
+          const projectsList: Project[] = [];
+          snapshot.forEach((doc: any) => {
             const urlId = doc.id.toLowerCase().replace(/\s+/g, '-');
             const projectData = doc.data();
-            if (projectData.status === 'active') {
+            // Include only active projects or those with missing status
+            if (projectData.status === 'active' || !projectData.status) {
               projectsList.push({ 
                 title: doc.id,
                 id: urlId,
-                status: 'active',
-                ...projectData as Omit<Project, 'title' | 'id' | 'status'>
+                status: projectData.status || 'active',
+                displayOrder: projectData.displayOrder || 0,
+                ...projectData as Omit<Project, 'title' | 'id' | 'status' | 'displayOrder'>
               });
             }
           });
-          setProjects(projectsList);
+          // Sort by displayOrder and year to ensure consistency
+          projectsList.sort((a, b) => {
+            if (a.displayOrder === b.displayOrder) {
+              return (b.year || 0) - (a.year || 0);
+            }
+            return (a.displayOrder || 0) - (b.displayOrder || 0);
+          });
+          console.log(`Active projects from ${source}:`, projectsList);
+          return projectsList;
+        };
+
+        // Try cached data first
+        let projectsList: Project[] = [];
+        try {
+          const cachedSnapshot = await getDocsFromCache(q);
+          if (!cachedSnapshot.empty) {
+            console.log('Serving projects from cache');
+            projectsList = processSnapshot(cachedSnapshot, 'cache');
+            setProjects(projectsList);
+          }
+        } catch (cacheError) {
+          console.warn('Cache fetch failed:', cacheError);
         }
 
         // Fetch fresh data from server
-        const serverSnapshot = await getDocs(projectsCollection);
-        console.log('Serving projects from server');
-        const updatedProjectsList: Project[] = [];
-        serverSnapshot.forEach((doc) => {
-          const urlId = doc.id.toLowerCase().replace(/\s+/g, '-');
-          const projectData = doc.data();
-          if (projectData.status === 'active') {
-            updatedProjectsList.push({ 
-              title: doc.id,
-              id: urlId,
-              status: 'active',
-              ...projectData as Omit<Project, 'title' | 'id' | 'status'>
-            });
-          }
-        });
-        setProjects(updatedProjectsList);
-      } catch (error) {
+        let updatedProjectsList: Project[] = [];
+        try {
+          const serverSnapshot = await getDocs(q);
+          console.log('Serving projects from server');
+          updatedProjectsList = processSnapshot(serverSnapshot, 'server');
+          setProjects(updatedProjectsList);
+        } catch (serverError: any) {
+          console.warn('Server fetch with index failed:', serverError.message);
+          // Fallback to unordered query if index is missing
+          const fallbackSnapshot = await getDocs(projectsCollection);
+          console.log('Serving projects from server (fallback)');
+          updatedProjectsList = processSnapshot(fallbackSnapshot, 'server fallback');
+          setProjects(updatedProjectsList);
+        }
+
+        if (updatedProjectsList.length === 0) {
+          setError('No active projects found. Please add projects with status "active" in Portfolio Management.');
+        }
+      } catch (error: any) {
         console.error("Error fetching projects:", error);
+        setError(`Failed to load projects: ${error.message}. Please check your database or try again later.`);
       } finally {
         setLoading(false);
       }
@@ -132,12 +160,21 @@ const Portfolio = () => {
   }, []);
 
   // Filter projects based on active category with memoization
-  const filteredProjects = useMemo(() => 
-    projects.filter(project => 
-      activeCategory === "All" || (project.tags && project.tags.includes(activeCategory))
-    ),
-    [projects, activeCategory]
-  );
+  const filteredProjects = useMemo(() => {
+    const filtered = projects
+      .filter(project => 
+        (project.status === 'active' || !project.status) &&
+        (activeCategory === "All" || (project.tags && project.tags.includes(activeCategory)))
+      )
+      .sort((a, b) => {
+        if (a.displayOrder === b.displayOrder) {
+          return (b.year || 0) - (a.year || 0);
+        }
+        return (a.displayOrder || 0) - (b.displayOrder || 0);
+      });
+    console.log(`Filtered projects (category: ${activeCategory}):`, filtered);
+    return filtered;
+  }, [projects, activeCategory]);
 
   // Check if device is mobile
   useEffect(() => {
@@ -161,7 +198,7 @@ const Portfolio = () => {
     const observerOptions = {
       root: null,
       rootMargin: '50px',
-      threshold: [0.15, 0.3, 0.5], // Multiple thresholds for smoother transitions
+      threshold: [0.15, 0.3, 0.5],
     };
     
     const observerCallback = (entries: IntersectionObserverEntry[]) => {
@@ -185,7 +222,7 @@ const Portfolio = () => {
   // Handle category change
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
-    setVisibleProjects([]); // Reset visibility on category change
+    setVisibleProjects([]);
   };
 
   // GSAP animations for static elements
@@ -206,7 +243,6 @@ const Portfolio = () => {
         }
       );
       
-      // Ensure awards animate in sync with a more controlled timing
       const awardCards = gsap.utils.toArray('.award-card');
       gsap.set(awardCards, { scale: 0.8, opacity: 0 });
       
@@ -259,9 +295,9 @@ const Portfolio = () => {
           y: 0,
           opacity: 1,
           duration: 0.6,
-          stagger: 0.05, // Reduced stagger for smoother load
+          stagger: 0.05,
           ease: 'power3.out',
-          delay: 0.1, // Slight delay to ensure DOM is ready
+          delay: 0.1,
         }
       );
     }, projectsContainerRef);
@@ -333,12 +369,25 @@ const Portfolio = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
-            className="min-h-[400px]" // Prevent layout shift
+            className="min-h-[400px]"
           >
             {loading ? (
               <div className="text-center py-12">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-accent border-r-transparent"></div>
                 <p className="mt-4 text-gray-600">Loading projects...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-600">{error}</p>
+                <p className="text-gray-600 mt-2">
+                  Please add active projects in Portfolio Management or check your Firestore database.
+                </p>
+                <Link
+                  to="/portfolio-management"
+                  className="mt-4 inline-block px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+                >
+                  Go to Portfolio Management
+                </Link>
               </div>
             ) : filteredProjects.length > 0 ? (
               <div ref={projectsContainerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -379,6 +428,13 @@ const Portfolio = () => {
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-600">No active projects found for this category.</p>
+                <p className="text-gray-500 mt-2">Try selecting a different category or adding new active projects in Portfolio Management.</p>
+                <Link
+                  to="/portfolio-management"
+                  className="mt-4 inline-block px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+                >
+                  Go to Portfolio Management
+                </Link>
               </div>
             )}
           </motion.div>

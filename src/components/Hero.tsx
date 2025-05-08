@@ -149,7 +149,7 @@ const Hero: React.FC = () => {
           
           <iframe
             className="absolute w-full h-full pointer-events-none"
-            src="https://www.youtube-nocookie.com/embed/LM2L0iX11do?autoplay=1&mute=1&controls=0&loop=1&playlist=LM2L0iX11do&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&playsinline=1&fs=0"
+            src="https://www.youtube.com/embed/ejVBQ_4Iv0Y?autoplay=1&mute=1&controls=0&loop=1&playlist=LM2L0iX11do&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&playsinline=1&fs=0"
             title="Cinematic Video Background"
             frameBorder="0"
             allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
