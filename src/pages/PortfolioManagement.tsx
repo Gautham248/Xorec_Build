@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, enableIndexedDbPersistence, getDocsFromCache, QuerySnapshot, writeBatch, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase-config';
-import { Edit, Search, Filter, Trash2, Plus, Check, X, Star, LayoutGrid } from 'lucide-react';
+import { Edit, Search, Filter, Trash2, Plus, Check, X, Star, LayoutGrid, Tag } from 'lucide-react';
 import { gsap } from 'gsap';
 import toast, { Toaster } from 'react-hot-toast';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -22,12 +22,19 @@ interface Project {
   updatedAt?: Date;
 }
 
+interface Tag {
+  id: string;
+  count: number;
+  createdAt: string;
+}
+
 import Auth from '@/components/Auth';
 
 const PortfolioManagement: React.FC = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -39,32 +46,36 @@ const PortfolioManagement: React.FC = () => {
   const [featuredProjects, setFeaturedProjects] = useState<Set<string>>(new Set());
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   const [reorderedProjects, setReorderedProjects] = useState<Project[]>([]);
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [newTag, setNewTag] = useState('');
+  const [deleteTag, setDeleteTag] = useState<string | null>(null);
+  const [deleteTagProjects, setDeleteTagProjects] = useState<Project[]>([]);
 
-  // Categories for filtering
-  const categories = [
-    "All", 
-    "Events",
-    "Products",
-    "Films",
-    "Launches",
-    "Delivery",
-    "Concerts",
-    "Aviation",
-    "Automotive",
-    "Architecture"
-  ];
-
-  // Fetch projects from Firestore
+  // Fetch projects and tags from Firestore
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch tags
+        const tagsCollection = collection(db, "TAGS");
+        const tagsSnapshot = await getDocs(tagsCollection);
+        const tagsList: Tag[] = [];
+        tagsSnapshot.forEach(doc => {
+          const data = doc.data();
+          tagsList.push({
+            id: doc.id,
+            count: data.count || 0,
+            createdAt: data.createdAt || new Date().toISOString()
+          });
+        });
+        setTags(tagsList.sort((a, b) => a.id.localeCompare(b.id)));
+        console.log('Fetched tags:', tagsList);
+
+        // Fetch projects
         const projectsCollection = collection(db, "Projects");
-        
-        // Simplified query to avoid issues with displayOrder
-        const q = query(
-          projectsCollection,
-          orderBy("year", "desc")
-        );
+        const q = query(projectsCollection, orderBy("year", "desc"));
 
         // Fetch featured projects
         const featuredCollection = collection(db, "FeaturedProjects");
@@ -112,24 +123,24 @@ const PortfolioManagement: React.FC = () => {
         // Get cached data first
         const cachedSnapshot = await getDocsFromCache(q);
         if (!cachedSnapshot.empty) {
-          console.log('Serving from cache');
+          console.log('Serving projects from cache');
           processSnapshot(cachedSnapshot);
         }
 
         // Then get fresh data from server
         const freshSnapshot = await getDocs(q);
-        console.log('Serving from server');
+        console.log('Serving projects from server');
         processSnapshot(freshSnapshot);
 
       } catch (error: any) {
-        console.error("Error fetching projects:", error);
-        setError(`Failed to load projects: ${error.message}`);
+        console.error("Error fetching data:", error);
+        setError(`Failed to load data: ${error.message}`);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchProjects();
+
+    fetchData();
   }, []);
 
   // Clear success message after 3 seconds
@@ -145,7 +156,7 @@ const PortfolioManagement: React.FC = () => {
   // Initialize reordered projects when opening modal
   useEffect(() => {
     if (isReorderModalOpen) {
-      setReorderedProjects([...projects].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
+      setReorderedProjects([...projects].filter(p => p.status === 'active').sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
     }
   }, [isReorderModalOpen, projects]);
 
@@ -180,13 +191,161 @@ const PortfolioManagement: React.FC = () => {
         }
       );
     }, sectionRef);
-    
+
     return () => ctx.revert();
   }, []);
 
   // Handle edit project navigation
   const handleEditProject = (projectId: string) => {
     navigate(`/portfolio/edit/${projectId}`);
+  };
+
+  // Update TAGS collection based on active projects
+  const updateTagsCollection = async (projects: Project[]) => {
+    try {
+      const batch = writeBatch(db);
+      const tagsCollection = collection(db, "TAGS");
+
+      // Get all tags from active projects (excluding "All")
+      const activeProjects = projects.filter(p => p.status === 'active' || !p.status);
+      const tagCounts = new Map<string, number>();
+      activeProjects.forEach(project => {
+        if (project.tags) {
+          project.tags.forEach(tag => {
+            if (tag !== 'All') {
+              tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+            }
+          });
+        }
+      });
+
+      // Fetch existing tags
+      const tagsSnapshot = await getDocs(tagsCollection);
+      const existingTags = new Set<string>();
+      tagsSnapshot.forEach(doc => existingTags.add(doc.id));
+
+      // Add or update tags in TAGS collection
+      tagCounts.forEach((count, tag) => {
+        const tagRef = doc(db, 'TAGS', tag);
+        batch.set(tagRef, {
+          id: tag,
+          count,
+          createdAt: existingTags.has(tag) ? tagsSnapshot.docs.find(doc => doc.id === tag)?.data().createdAt || new Date().toISOString() : new Date().toISOString()
+        }, { merge: true });
+      });
+
+      // Remove tags no longer used by active projects
+      existingTags.forEach(tag => {
+        if (!tagCounts.has(tag)) {
+          const tagRef = doc(db, 'TAGS', tag);
+          batch.delete(tagRef);
+        }
+      });
+
+      await batch.commit();
+      console.log('TAGS collection updated:', Object.fromEntries(tagCounts));
+
+      // Refresh tags list
+      const newTagsSnapshot = await getDocs(tagsCollection);
+      const newTagsList: Tag[] = [];
+      newTagsSnapshot.forEach(doc => {
+        const data = doc.data();
+        newTagsList.push({
+          id: doc.id,
+          count: data.count || 0,
+          createdAt: data.createdAt || new Date().toISOString()
+        });
+      });
+      setTags(newTagsList.sort((a, b) => a.id.localeCompare(b.id)));
+    } catch (error) {
+      console.error('Error updating TAGS collection:', error);
+      toast.error('Failed to update tags', { duration: 3000 });
+    }
+  };
+
+  // Handle tag creation
+  const handleCreateTag = async () => {
+    if (!newTag.trim()) {
+      toast.error('Tag name cannot be empty', { duration: 3000 });
+      return;
+    }
+
+    const normalizedTag = newTag.trim();
+    if (tags.some(tag => tag.id.toLowerCase() === normalizedTag.toLowerCase())) {
+      toast.error('Tag already exists', { duration: 3000 });
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const tagRef = doc(db, 'TAGS', normalizedTag);
+      await setDoc(tagRef, {
+        id: normalizedTag,
+        count: 0,
+        createdAt: new Date().toISOString()
+      });
+      setTags([...tags, { id: normalizedTag, count: 0, createdAt: new Date().toISOString() }].sort((a, b) => a.id.localeCompare(b.id)));
+      setNewTag('');
+      toast.success(`Tag "${normalizedTag}" created`, { duration: 3000 });
+    } catch (error) {
+      console.error('Error creating tag:', error);
+      toast.error('Failed to create tag', { duration: 3000 });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle tag deletion preparation
+  const prepareDeleteTag = (tagId: string) => {
+    const affectedProjects = projects.filter(project => 
+      (project.status === 'active' || !project.status) && 
+      project.tags?.includes(tagId)
+    );
+    setDeleteTagProjects(affectedProjects);
+    setDeleteTag(tagId);
+  };
+
+  // Handle tag deletion
+  const handleDeleteTag = async () => {
+    if (!deleteTag) return;
+
+    try {
+      setIsProcessing(true);
+      const batch = writeBatch(db);
+
+      // Update affected projects to have tags: ["All"]
+      deleteTagProjects.forEach(project => {
+        const projectRef = doc(db, 'Projects', project.id);
+        batch.update(projectRef, {
+          tags: ['All'],
+          updatedAt: new Date()
+        });
+      });
+
+      // Delete the tag
+      const tagRef = doc(db, 'TAGS', deleteTag);
+      batch.delete(tagRef);
+
+      await batch.commit();
+
+      // Update local state
+      const updatedProjects = projects.map(project => {
+        if (deleteTagProjects.some(p => p.id === project.id)) {
+          return { ...project, tags: ['All'], updatedAt: new Date() };
+        }
+        return project;
+      });
+      setProjects(updatedProjects);
+      setTags(tags.filter(tag => tag.id !== deleteTag));
+      setDeleteTag(null);
+      setDeleteTagProjects([]);
+      toast.success(`Tag "${deleteTag}" deleted and ${deleteTagProjects.length} project(s) updated`, { duration: 3000 });
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      toast.error('Failed to delete tag', { duration: 3000 });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Handle bulk status update
@@ -199,18 +358,18 @@ const PortfolioManagement: React.FC = () => {
     setIsProcessing(true);
     try {
       const batch = writeBatch(db);
-      
+
       if (bulkStatus === 'active') {
         let highestDisplayOrder = 0;
         projects.forEach(project => {
-          if (project.displayOrder && project.displayOrder > highestDisplayOrder) {
+          if (project.status === 'active' && project.displayOrder && project.displayOrder > highestDisplayOrder) {
             highestDisplayOrder = project.displayOrder;
           }
         });
-        
+
         selectedProjects.forEach((projectId, index) => {
           const projectRef = doc(db, 'Projects', projectId);
-          batch.update(projectRef, { 
+          batch.update(projectRef, {
             status: bulkStatus,
             displayOrder: highestDisplayOrder + index + 1,
             updatedAt: new Date()
@@ -219,43 +378,51 @@ const PortfolioManagement: React.FC = () => {
       } else {
         selectedProjects.forEach(projectId => {
           const projectRef = doc(db, 'Projects', projectId);
-          batch.update(projectRef, { 
+          batch.update(projectRef, {
             status: bulkStatus,
+            displayOrder: 0,
             updatedAt: new Date()
           });
         });
       }
-      
+
       await batch.commit();
-      
-      setProjects(prev => prev.map(p => {
+
+      const updatedProjects = projects.map(p => {
         if (selectedProjects.includes(p.id)) {
           if (bulkStatus === 'active') {
             const index = selectedProjects.indexOf(p.id);
             let highestDisplayOrder = 0;
-            prev.forEach(project => {
-              if (project.displayOrder && project.displayOrder > highestDisplayOrder) {
+            projects.forEach(project => {
+              if (project.status === 'active' && project.displayOrder && project.displayOrder > highestDisplayOrder) {
                 highestDisplayOrder = project.displayOrder;
               }
             });
-            
-            return { 
-              ...p, 
+
+            return {
+              ...p,
               status: bulkStatus,
               displayOrder: highestDisplayOrder + index + 1,
               updatedAt: new Date()
             };
           } else {
-            return { 
-              ...p, 
+            return {
+              ...p,
               status: bulkStatus,
+              displayOrder: 0,
               updatedAt: new Date()
             };
           }
         }
         return p;
-      }));
-      
+      });
+
+      setProjects(updatedProjects);
+      console.log('Updated projects after status change:', updatedProjects);
+
+      // Update TAGS collection
+      await updateTagsCollection(updatedProjects);
+
       setSelectedProjects([]);
       setBulkStatus('');
       toast.success(`Successfully updated ${selectedProjects.length} project(s) to ${bulkStatus}`, {
@@ -276,7 +443,7 @@ const PortfolioManagement: React.FC = () => {
       setIsProcessing(true);
       const featuredRef = doc(db, "FeaturedProjects", projectId);
       const isFeatured = featuredProjects.has(projectId);
-      
+
       if (isFeatured) {
         await deleteDoc(featuredRef);
         setFeaturedProjects(prev => {
@@ -301,8 +468,8 @@ const PortfolioManagement: React.FC = () => {
           toast.success('Project added to featured projects', { duration: 3000 });
         }
       }
-      
-      setProjects(prev => 
+
+      setProjects(prev =>
         prev.map(p => p.id === projectId ? { ...p, featured: !isFeatured } : p)
       );
     } catch (error) {
@@ -316,15 +483,15 @@ const PortfolioManagement: React.FC = () => {
   // Handle bulk featured toggle
   const handleBulkFeaturedToggle = async (setAsFeatured: boolean) => {
     if (selectedProjects.length === 0) return;
-    
+
     setIsProcessing(true);
     try {
       const batch = writeBatch(db);
-      
+
       for (const projectId of selectedProjects) {
         const featuredRef = doc(db, "FeaturedProjects", projectId);
         const isFeatured = featuredProjects.has(projectId);
-        
+
         if (setAsFeatured && !isFeatured) {
           const projectDoc = await getDoc(doc(db, "Projects", projectId));
           if (projectDoc.exists()) {
@@ -342,9 +509,9 @@ const PortfolioManagement: React.FC = () => {
           batch.delete(featuredRef);
         }
       }
-      
+
       await batch.commit();
-      
+
       const newFeaturedSet = new Set(featuredProjects);
       selectedProjects.forEach(projectId => {
         if (setAsFeatured) {
@@ -353,14 +520,14 @@ const PortfolioManagement: React.FC = () => {
           newFeaturedSet.delete(projectId);
         }
       });
-      
+
       setFeaturedProjects(newFeaturedSet);
-      setProjects(prev => 
-        prev.map(p => 
+      setProjects(prev =>
+        prev.map(p =>
           selectedProjects.includes(p.id) ? { ...p, featured: setAsFeatured } : p
         )
       );
-      
+
       setSelectedProjects([]);
       toast.success(`Successfully ${setAsFeatured ? 'added' : 'removed'} ${selectedProjects.length} project(s) ${setAsFeatured ? 'to' : 'from'} featured`, {
         duration: 3000,
@@ -369,6 +536,52 @@ const PortfolioManagement: React.FC = () => {
     } catch (error) {
       console.error('Error updating featured status:', error);
       toast.error('Failed to update featured status', { duration: 3000 });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle project deletion with tag update
+  const handleBulkDelete = async () => {
+    if (selectedProjects.length === 0) return;
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedProjects.length} project(s)?`)) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const batch = writeBatch(db);
+      selectedProjects.forEach(projectId => {
+        const projectRef = doc(db, 'Projects', projectId);
+        batch.delete(projectRef);
+
+        if (featuredProjects.has(projectId)) {
+          const featuredRef = doc(db, 'FeaturedProjects', projectId);
+          batch.delete(featuredRef);
+        }
+      });
+
+      await batch.commit();
+
+      const updatedProjects = projects.filter(p => !selectedProjects.includes(p.id));
+      setProjects(updatedProjects);
+
+      const newFeaturedSet = new Set(featuredProjects);
+      selectedProjects.forEach(id => newFeaturedSet.delete(id));
+      setFeaturedProjects(newFeaturedSet);
+
+      // Update TAGS collection
+      await updateTagsCollection(updatedProjects);
+
+      setSelectedProjects([]);
+      toast.success(`Successfully deleted ${selectedProjects.length} project(s)`, {
+        duration: 3000,
+        position: 'top-right'
+      });
+    } catch (error) {
+      console.error('Error deleting projects:', error);
+      toast.error('Failed to delete projects', { duration: 3000 });
     } finally {
       setIsProcessing(false);
     }
@@ -423,10 +636,11 @@ const PortfolioManagement: React.FC = () => {
 
       await batch.commit();
 
-      setProjects(prev => prev.map(p => {
+      const updatedProjects = projects.map(p => {
         const updatedProject = reorderedProjects.find(rp => rp.id === p.id);
         return updatedProject ? { ...p, displayOrder: reorderedProjects.indexOf(updatedProject) + 1, updatedAt: new Date() } : p;
-      }));
+      });
+      setProjects(updatedProjects);
 
       setIsReorderModalOpen(false);
       toast.success('Project order updated successfully', { duration: 3000, position: 'top-right' });
@@ -491,7 +705,7 @@ const PortfolioManagement: React.FC = () => {
       <div className="pt-20">
         <Toaster />
         <section ref={sectionRef} className="bg-white py-24">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
@@ -508,7 +722,7 @@ const PortfolioManagement: React.FC = () => {
               </div>
             </div>
 
-            {/* Action Bar - Search, Add Project, Reorder Button */}
+            {/* Action Bar - Search, Add Project, Reorder Button, Manage Tags */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
               <div className="relative w-full md:w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -522,6 +736,14 @@ const PortfolioManagement: React.FC = () => {
               </div>
               <div className="flex items-center gap-4">
                 <button
+                  onClick={() => setIsTagModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  disabled={isProcessing}
+                >
+                  <Tag size={18} />
+                  Manage Tags
+                </button>
+                <button
                   onClick={() => setIsReorderModalOpen(true)}
                   className="flex items-center gap-2 px-5 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   disabled={isProcessing}
@@ -529,8 +751,8 @@ const PortfolioManagement: React.FC = () => {
                   <LayoutGrid size={18} />
                   Reorder Projects
                 </button>
-                <Link 
-                  to="/upload SPAWNED SUBTASK [Upload Project Component]project" 
+                <Link
+                  to="/upload-project"
                   className="flex items-center gap-2 px-5 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
                 >
                   <Plus size={18} />
@@ -541,12 +763,12 @@ const PortfolioManagement: React.FC = () => {
 
             {/* Filter Buttons */}
             <div className="flex overflow-x-auto pb-4 mb-8 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap md:justify-center gap-4">
-              {categories.map((category, index) => (
+              {["All", ...tags.map(tag => tag.id)].map((category, index) => (
                 <button
                   key={index}
                   className={`filter-btn flex-shrink-0 px-6 py-2 rounded-lg text-sm transition-all duration-300 ${
-                    activeCategory === category 
-                      ? 'bg-neutral-900 text-white' 
+                    activeCategory === category
+                      ? 'bg-neutral-900 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                   onClick={() => setActiveCategory(category)}
@@ -634,7 +856,7 @@ const PortfolioManagement: React.FC = () => {
                           <td className="px-4 py-3">
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                project.status === 'active' 
+                                project.status === 'active'
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-gray-100 text-gray-800'
                               }`}
@@ -686,8 +908,8 @@ const PortfolioManagement: React.FC = () => {
                 <p className="text-gray-500 mb-6">
                   {projects.length === 0 ? 'Add a new project to get started.' : 'Try adjusting your search or category filter.'}
                 </p>
-                <Link 
-                  to="/upload-project" 
+                <Link
+                  to="/upload-project"
                   className="inline-flex items-center gap-2 px-5 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
                 >
                   <Plus size={18} />
@@ -723,40 +945,7 @@ const PortfolioManagement: React.FC = () => {
                       <span>Remove from Featured</span>
                     </button>
                     <button
-                      onClick={async () => {
-                        if (window.confirm(`Are you sure you want to delete ${selectedProjects.length} project(s)?`)) {
-                          setIsProcessing(true);
-                          try {
-                            const batch = writeBatch(db);
-                            selectedProjects.forEach(projectId => {
-                              const projectRef = doc(db, 'Projects', projectId);
-                              batch.delete(projectRef);
-                              
-                              if (featuredProjects.has(projectId)) {
-                                const featuredRef = doc(db, 'FeaturedProjects', projectId);
-                                batch.delete(featuredRef);
-                              }
-                            });
-                            await batch.commit();
-                            setProjects(prev => prev.filter(p => !selectedProjects.includes(p.id)));
-                            
-                            const newFeaturedSet = new Set(featuredProjects);
-                            selectedProjects.forEach(id => newFeaturedSet.delete(id));
-                            setFeaturedProjects(newFeaturedSet);
-                            
-                            setSelectedProjects([]);
-                            toast.success(`Successfully deleted ${selectedProjects.length} project(s)`, {
-                              duration: 3000,
-                              position: 'top-right'
-                            });
-                          } catch (error) {
-                            console.error('Error deleting projects:', error);
-                            toast.error('Failed to delete projects', { duration: 3000 });
-                          } finally {
-                            setIsProcessing(false);
-                          }
-                        }
-                      }}
+                      onClick={handleBulkDelete}
                       className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       disabled={isProcessing}
                     >
@@ -793,6 +982,142 @@ const PortfolioManagement: React.FC = () => {
               </div>
             )}
 
+            {/* Tag Management Modal */}
+            {isTagModalOpen && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-md w-full flex flex-col">
+                  <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-800">Manage Tags</h2>
+                    <button
+                      onClick={() => {
+                        setIsTagModalOpen(false);
+                        setNewTag('');
+                      }}
+                      className="text-gray-500 hover:text-gray-700"
+                      title="Close modal"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <div className="mb-6">
+                      <label htmlFor="newTag" className="block text-sm font-medium text-gray-700 mb-2">
+                        Add New Tag
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="newTag"
+                          type="text"
+                          value={newTag}
+                          onChange={(e) => setNewTag(e.target.value)}
+                          placeholder="Enter tag name"
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                          disabled={isProcessing}
+                        />
+                        <button
+                          onClick={handleCreateTag}
+                          className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors flex items-center gap-2"
+                          disabled={isProcessing}
+                        >
+                          <Plus size={18} />
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-800 mb-4">Existing Tags</h3>
+                      {tags.length === 0 ? (
+                        <p className="text-gray-500 text-center">No tags available</p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {tags.map(tag => (
+                            <div key={tag.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                              <span className="text-gray-700">{tag.id} ({tag.count})</span>
+                              <button
+                                onClick={() => prepareDeleteTag(tag.id)}
+                                className="text-red-600 hover:text-red-800"
+                                title={`Delete tag ${tag.id}`}
+                                disabled={isProcessing}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-6 border-t border-gray-200 flex justify-end">
+                    <button
+                      onClick={() => {
+                        setIsTagModalOpen(false);
+                        setNewTag('');
+                      }}
+                      className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Delete Tag Confirmation Modal */}
+            {deleteTag && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-lg w-full flex flex-col">
+                  <div className="p-6 border-b border-gray-200">
+                    <h2 className="text-2xl font-bold text-gray-800">Delete Tag</h2>
+                  </div>
+                  <div className="p-6">
+                    <p className="text-gray-700 mb-4">
+                      Are you sure you want to delete the tag <strong>{deleteTag}</strong>?
+                    </p>
+                    <p className="text-gray-7
+                    00 mb-4">
+                      This will affect {deleteTagProjects.length} project{deleteTagProjects.length !== 1 ? 's' : ''}:
+                    </p>
+                    {deleteTagProjects.length > 0 ? (
+                      <ul className="list-disc pl-5 mb-4 text-gray-600">
+                        {deleteTagProjects.map(project => (
+                          <li key={project.id}>{project.id}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-600 mb-4">No projects are using this tag.</p>
+                    )}
+                    <p className="text-gray-700">
+                      Affected projects will be updated to have the tag "All".
+                    </p>
+                  </div>
+                  <div className="p-6 border-t border-gray-200 flex justify-end gap-4">
+                    <button
+                      onClick={() => {
+                        setDeleteTag(null);
+                        setDeleteTagProjects([]);
+                      }}
+                      className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                      disabled={isProcessing}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteTag}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
+                      ) : (
+                        <Trash2 size={18} />
+                      )}
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Reorder Modal */}
             {isReorderModalOpen && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -810,7 +1135,7 @@ const PortfolioManagement: React.FC = () => {
                   <div className="p-6 overflow-y-auto">
                     <p className="text-gray-600 mb-4">Drag and drop projects to reorder them.</p>
                     {reorderedProjects.length === 0 ? (
-                      <p className="text-gray-500 text-center">No projects available to reorder.</p>
+                      <p className="text-gray-500 text-center">No active projects available to reorder.</p>
                     ) : (
                       <DndContext
                         sensors={sensors}
@@ -861,7 +1186,7 @@ const PortfolioManagement: React.FC = () => {
                 {successMessage}
               </div>
             )}
-            
+
             {error && (
               <div className="mt-4 p-4 bg-red-50 text-red-800 rounded-lg">
                 {error}

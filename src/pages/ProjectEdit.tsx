@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, getDocs, collection, getDocsFromCache } from 'firebase/firestore';
 import { db } from '@/firebase-config';
 import { 
   Save, 
@@ -39,16 +38,11 @@ interface ProjectData {
   status: 'active' | 'disabled';
 }
 
-const TAG_OPTIONS = [
-  'Events',
-  'Products',
-  'Launches',
-  'Delivery',
-  'Concerts',
-  'Aviation',
-  'Automotive',
-  'Architecture'
-];
+interface Tag {
+  id: string;
+  count: number;
+  createdAt: string;
+}
 
 const ProjectEdit: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -57,11 +51,13 @@ const ProjectEdit: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tagsLoading, setTagsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [originalProjectData, setOriginalProjectData] = useState<ProjectData | null>(null);
+  const [tags, setTags] = useState<Tag[]>([]);
   
   // Form state
   const [projectTitle, setProjectTitle] = useState('');
@@ -78,6 +74,51 @@ const ProjectEdit: React.FC = () => {
     videoOrientation: 'Landscape',
     status: 'active'
   });
+
+  // Fetch tags from Firestore
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        setTagsLoading(true);
+        const tagsCollection = collection(db, "TAGS");
+        
+        // Try to get from cache first
+        try {
+          const cachedSnapshot = await getDocsFromCache(tagsCollection);
+          if (!cachedSnapshot.empty) {
+            const tagsList = cachedSnapshot.docs.map(doc => ({
+              id: doc.id,
+              count: doc.data().count || 0,
+              createdAt: doc.data().createdAt || new Date().toISOString()
+            }));
+            console.log('Serving tags from cache:', tagsList);
+            setTags(tagsList.sort((a, b) => a.id.localeCompare(b.id)));
+            setTagsLoading(false);
+            return;
+          }
+        } catch (cacheError) {
+          console.warn('Cache fetch for tags failed:', cacheError);
+        }
+        
+        // Fetch from server
+        const serverSnapshot = await getDocs(tagsCollection);
+        const tagsList = serverSnapshot.docs.map(doc => ({
+          id: doc.id,
+          count: doc.data().count || 0,
+          createdAt: doc.data().createdAt || new Date().toISOString()
+        }));
+        console.log('Serving tags from server:', tagsList);
+        setTags(tagsList.sort((a, b) => a.id.localeCompare(b.id)));
+      } catch (error: any) {
+        console.error("Error fetching tags:", error);
+        setError(prev => prev ? `${prev}; Failed to load tags` : 'Failed to load tags');
+      } finally {
+        setTagsLoading(false);
+      }
+    };
+    
+    fetchTags();
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -576,22 +617,33 @@ const ProjectEdit: React.FC = () => {
                   {dropdownOpen && (
                     <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200">
                       <div className="max-h-60 overflow-auto p-1">
-                        {TAG_OPTIONS.map((tag) => (
-                          <div
-                            key={tag}
-                            onClick={() => handleTagToggle(tag)}
-                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded hover:bg-gray-100 ${
-                              formData.tags.includes(tag) ? 'bg-gray-100' : ''
-                            }`}
-                          >
-                            <div className="flex-shrink-0 h-4 w-4 border rounded flex items-center justify-center">
-                              {formData.tags.includes(tag) && (
-                                <Check size={12} className="text-accent" />
-                              )}
-                            </div>
-                            <span>{tag}</span>
+                        {tagsLoading ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 size={16} className="animate-spin text-gray-500 mr-2" />
+                            <span className="text-gray-500 text-sm">Loading tags...</span>
                           </div>
-                        ))}
+                        ) : tags.length === 0 ? (
+                          <div className="px-3 py-2 text-gray-500 text-sm">
+                            No tags available
+                          </div>
+                        ) : (
+                          tags.map((tag) => (
+                            <div
+                              key={tag.id}
+                              onClick={() => handleTagToggle(tag.id)}
+                              className={`flex items-center gap-2 px-3 py-2 cursor-pointer rounded hover:bg-gray-100 ${
+                                formData.tags.includes(tag.id) ? 'bg-gray-100' : ''
+                              }`}
+                            >
+                              <div className="flex-shrink-0 h-4 w-4 border rounded flex items-center justify-center">
+                                {formData.tags.includes(tag.id) && (
+                                  <Check size={12} className="text-accent" />
+                                )}
+                              </div>
+                              <span>{tag.id}</span>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   )}

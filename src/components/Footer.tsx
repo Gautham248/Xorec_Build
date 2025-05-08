@@ -21,21 +21,21 @@ const Footer: React.FC = () => {
               Industry-recognized video production agency creating cinematic content for global brands.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-red-600 transition-colors">
+              <a href="https://www.instagram.com/xorec.in?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" className="text-gray-400 hover:text-red-600 transition-colors">
                 <Instagram size={20} />
               </a>
-              <a href="#" className="text-gray-400 hover:text-red-600 transition-colors">
+              {/* <a href="#" className="text-gray-400 hover:text-red-600 transition-colors">
                 <Twitter size={20} />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-red-600 transition-colors">
+              </a> */}
+              <a href="https://www.linkedin.com/company/xorec/" className="text-gray-400 hover:text-red-600 transition-colors">
                 <Linkedin size={20} />
               </a>
-              <a href="#" className="text-gray-400 hover:text-red-600 transition-colors">
-                <Facebook size={20} />
+              <a href="https://www.behance.net/xorecmediacorp?tracking_source=search_projects%7Cbuddh+international+circuit" className="text-gray-400 hover:text-red-600 transition-colors">
+                <h4>Be</h4>
               </a>
-              <a href="#" className="text-gray-400 hover:text-red-600 transition-colors">
+              {/* <a href="#" className="text-gray-400 hover:text-red-600 transition-colors">
                 <Youtube size={20} />
-              </a>
+              </a> */}
             </div>
           </div>
           

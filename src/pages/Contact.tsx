@@ -8,21 +8,21 @@ const offices = [
     city: "Bangalore",
     address: "108 Jayanagar, Bangalore, 560068",
     phone: "+91 9846853884",
-    email: "eby@xorec.com",
+    email: "eby@xorec.in",
     timezone: "PST (UTC-8)"
   },
   {
     city: "London",
     address: "19 Newcastle Road, Reading, Berkshire RG2 7TN",
     phone: "+44 7436403501",
-    email: "sales@xorec.com",
+    email: "sales@xorec.in",
     timezone: "GMT (UTC+0)"
   },
   {
     city: "Dubai",
     address: "789 Production Road, Dubai Media City, UAE",
     phone: "+971 4 123 4567",
-    email: "dubai@xorec.com",
+    email: "dubai@xorec.in",
     timezone: "GST (UTC+4)"
   }
 ];
@@ -266,7 +266,7 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-bold text-black">Email Us</h3>
-                      <p className="text-gray-600">hello@xorec.com</p>
+                      <p className="text-gray-600">hello@xorec.in</p>
                     </div>
                   </div>
                   <div className="flex items-center">

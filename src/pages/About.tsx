@@ -2,12 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { Users, Target, Award, Clock } from 'lucide-react';
-import eby from '@/assets/Team/EBY.png';
-import vishak from '@/assets/Team/VISHAK.png';
-import nithin from '@/assets/Team/NITHIN.png';
 
 const About = () => {
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useRef(null);
 
   const stats = [
     { icon: <Users size={32} />, value: "25+", label: "Team Members" },
@@ -16,7 +13,7 @@ const About = () => {
     { icon: <Clock size={32} />, value: "24/7", label: "Support Available" }
   ];
 
-  const team = [
+  const founders = [
     {
       name: "Eby Eldho Ealiyas",
       position: "CEO",
@@ -34,6 +31,29 @@ const About = () => {
       position: "CTO",
       image: "https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/TEAM/VISHAK.png?updatedAt=1746546867720",
       bio: "Vishak specializes in cutting-edge cinematography and visual effects supervision."
+    }
+  ];
+  
+  const coreTeam = [
+    {
+      name: "Blessy Sabu",
+      position: "Head of Production",
+      image: "https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/TEAM/BLESSY%20SABU.png?updatedAt=1746714783998",
+    },
+    {
+      name: "Samuel V Saji",
+      position: "Visual Director",
+      image: "https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/TEAM/SAMUEL%20V%20SAJI.png?updatedAt=1746714783277",
+    },
+    {
+      name: "Abhiram M S",
+      position: "Post Production Supervisor ",
+      image: "https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/TEAM/ABHIRAM%20M%20S.png?updatedAt=1746714783974",
+    },
+    {
+      name: "Bibin Binu",
+      position: "Visual Content Head",
+      image: "https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/TEAM/BIBIN%20BINU.png?updatedAt=1746714783823",
     }
   ];
 
@@ -70,7 +90,7 @@ const About = () => {
           <div className="text-center mb-16">
             <h1 className="about-title text-5xl md:text-6xl font-bold mb-6">
               <div className="overflow-hidden">
-                <span >Who We</span> <span className="text-accent"> Are</span>
+                <span>Who We</span> <span className="text-accent"> Are</span>
               </div>
            
             </h1>
@@ -128,11 +148,11 @@ const About = () => {
             ))}
           </div>
 
-          {/* Team */}
-          <div className="mb-20">
-            <h2 className="text-3xl font-bold text-center mb-12">Our Leadership Team</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-10">
-              {team.map((member, index) => (
+          {/* Founders */}
+          <div className="mb-16">
+            <h2 className="text-3xl font-bold text-center mb-12">Our Leaders</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6">
+              {founders.map((founder, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
@@ -141,14 +161,43 @@ const About = () => {
                   viewport={{ once: true }}
                   className="bg-zinc-100 p-6 rounded-lg border border-gray-200 shadow-lg text-center"
                 >
-                  <img 
-                    src={member.image} 
-                    alt={member.name}
-                    className="w-32 h-32 rounded-full object-cover mx-auto mb-4"
-                  />
-                  <h3 className="text-xl font-bold text-black mb-2">{member.name}</h3>
-                  <p className="text-neutral-900 mb-4">{member.position}</p>
-                  <p className="text-gray-600">{member.bio}</p>
+                  <div className="mb-4 overflow-hidden rounded-md">
+                    <img 
+                      src={founder.image} 
+                      alt={founder.name}
+                      className="w-full h-64 object-cover"
+                    />
+                  </div>
+                  <h3 className="text-xl font-bold text-black mb-2">{founder.name}</h3>
+                  <p className="text-neutral-900 mb-4">{founder.position}</p>
+                  <p className="text-gray-600">{founder.bio}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Core Team */}
+          <div className="mb-20">
+            <h2 className="text-3xl font-bold text-center mb-10">Our Core Team</h2>
+            <div className="flex flex-wrap justify-center gap-6">
+              {coreTeam.map((member, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  className="bg-zinc-100 p-4 rounded-lg border border-gray-200 shadow-lg text-center w-56"
+                >
+                  <div className="mb-3 overflow-hidden rounded-md">
+                    <img 
+                      src={member.image} 
+                      alt={member.name}
+                      className="w-full h-40 object-cover"
+                    />
+                  </div>
+                  <h3 className="text-lg font-bold text-black mb-1">{member.name}</h3>
+                  <p className="text-neutral-900 text-sm">{member.position}</p>
                 </motion.div>
               ))}
             </div>

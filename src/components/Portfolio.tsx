@@ -278,8 +278,8 @@ const Portfolio: React.FC = () => {
         )}
         
         <div className="mt-16 text-center">
-          <Link to="/contact" className="btn bg-accent text-white hover:bg-accent/90 transition-colors px-6 py-3 rounded-md">
-            Discuss Your Project
+          <Link to="/portfolio" className="btn bg-accent text-white hover:bg-accent/90 transition-colors px-6 py-3 rounded-md">
+            See All Projects
           </Link>
         </div>
       </div>

@@ -27,6 +27,13 @@ interface Project {
   displayOrder?: number;
 }
 
+// Define the structure of a tag
+interface Tag {
+  id: string;
+  count: number;
+  createdAt: string;
+}
+
 const awards = [
   { title: "Successful Events", count: 107 },
   { title: "Track Days", count: 13 },
@@ -34,22 +41,9 @@ const awards = [
   { title: "Digital Ads", count: 12 }
 ];
 
-// Tag options from the previous upload form
-const categories = [
-  "All", 
-  "Events",
-  "Products",
-  "Films",
-  "Launches",
-  "Delivery",
-  "Concerts",
-  "Aviation",
-  "Automotive",
-  "Architecture"
-];
-
 const Portfolio = () => {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -61,27 +55,54 @@ const Portfolio = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Enable Firestore persistence
+  // Fetch tags and projects from Firestore with caching
   useEffect(() => {
-    const enablePersistence = async () => {
-      try {
-        await enableIndexedDbPersistence(db);
-      } catch (err: any) {
-        console.warn('Persistence error:', err.code, err.message);
-      }
-    };
-    enablePersistence();
-  }, []);
-
-  // Fetch projects from Firestore with caching
-  useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const projectsCollection = collection(db, "Projects");
 
-        // Try query with ordering by displayOrder and year
+        // Enable Firestore persistence
+        try {
+          await enableIndexedDbPersistence(db);
+        } catch (err: any) {
+          console.warn('Persistence error:', err.code, err.message);
+        }
+
+        // Fetch tags
+        const tagsCollection = collection(db, "TAGS");
+        let tagsList: Tag[] = [];
+        try {
+          const cachedTagsSnapshot = await getDocsFromCache(tagsCollection);
+          if (!cachedTagsSnapshot.empty) {
+            tagsList = cachedTagsSnapshot.docs.map(doc => ({
+              id: doc.id,
+              count: doc.data().count || 0,
+              createdAt: doc.data().createdAt || new Date().toISOString()
+            }));
+            console.log('Serving tags from cache:', tagsList);
+            setTags(tagsList.sort((a, b) => a.id.localeCompare(b.id)));
+          }
+        } catch (cacheError) {
+          console.warn('Cache fetch for tags failed:', cacheError);
+        }
+
+        try {
+          const serverTagsSnapshot = await getDocs(tagsCollection);
+          tagsList = serverTagsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            count: doc.data().count || 0,
+            createdAt: doc.data().createdAt || new Date().toISOString()
+          }));
+          console.log('Serving tags from server:', tagsList);
+          setTags(tagsList.sort((a, b) => a.id.localeCompare(b.id)));
+        } catch (tagError: any) {
+          console.error('Error fetching tags:', tagError);
+          setError(`Failed to load tags: ${tagError.message}`);
+        }
+
+        // Fetch projects
+        const projectsCollection = collection(db, "Projects");
         const q = query(
           projectsCollection,
           orderBy("displayOrder", "asc"),
@@ -94,9 +115,8 @@ const Portfolio = () => {
           snapshot.forEach((doc: any) => {
             const urlId = doc.id.toLowerCase().replace(/\s+/g, '-');
             const projectData = doc.data();
-            // Include only active projects or those with missing status
             if (projectData.status === 'active' || !projectData.status) {
-              projectsList.push({ 
+              projectsList.push({
                 title: doc.id,
                 id: urlId,
                 status: projectData.status || 'active',
@@ -105,7 +125,6 @@ const Portfolio = () => {
               });
             }
           });
-          // Sort by displayOrder and year to ensure consistency
           projectsList.sort((a, b) => {
             if (a.displayOrder === b.displayOrder) {
               return (b.year || 0) - (a.year || 0);
@@ -116,20 +135,7 @@ const Portfolio = () => {
           return projectsList;
         };
 
-        // Try cached data first
-        let projectsList: Project[] = [];
-        try {
-          const cachedSnapshot = await getDocsFromCache(q);
-          if (!cachedSnapshot.empty) {
-            console.log('Serving projects from cache');
-            projectsList = processSnapshot(cachedSnapshot, 'cache');
-            setProjects(projectsList);
-          }
-        } catch (cacheError) {
-          console.warn('Cache fetch failed:', cacheError);
-        }
-
-        // Fetch fresh data from server
+        // Always fetch from server to ensure fresh data
         let updatedProjectsList: Project[] = [];
         try {
           const serverSnapshot = await getDocs(q);
@@ -138,34 +144,35 @@ const Portfolio = () => {
           setProjects(updatedProjectsList);
         } catch (serverError: any) {
           console.warn('Server fetch with index failed:', serverError.message);
-          // Fallback to unordered query if index is missing
           const fallbackSnapshot = await getDocs(projectsCollection);
           console.log('Serving projects from server (fallback)');
           updatedProjectsList = processSnapshot(fallbackSnapshot, 'server fallback');
           setProjects(updatedProjectsList);
         }
 
-        if (updatedProjectsList.length === 0) {
-          setError('No active projects found. Please add projects with status "active" in Portfolio Management.');
+        if (updatedProjectsList.length === 0 && tagsList.length === 0) {
+          setError('No active projects or tags found.');
         }
       } catch (error: any) {
-        console.error("Error fetching projects:", error);
-        setError(`Failed to load projects: ${error.message}. Please check your database or try again later.`);
+        console.error("Error fetching data:", error);
+        setError(`Failed to load data: ${error.message}. Please check your database or try again later.`);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchProjects();
+
+    fetchData();
   }, []);
 
   // Filter projects based on active category with memoization
   const filteredProjects = useMemo(() => {
     const filtered = projects
-      .filter(project => 
-        (project.status === 'active' || !project.status) &&
-        (activeCategory === "All" || (project.tags && project.tags.includes(activeCategory)))
-      )
+      .filter(project => {
+        const isActive = project.status === 'active' || !project.status;
+        const hasTag = activeCategory === "All" || (project.tags && project.tags.includes(activeCategory));
+        console.log(`Project "${project.title}" - isActive: ${isActive}, hasTag: ${hasTag}, tags: ${project.tags}`);
+        return isActive && hasTag;
+      })
       .sort((a, b) => {
         if (a.displayOrder === b.displayOrder) {
           return (b.year || 0) - (a.year || 0);
@@ -349,19 +356,26 @@ const Portfolio = () => {
 
           {/* Filter Buttons */}
           <div className="filter-container flex flex-wrap justify-center gap-4 mb-12">
-            {categories.map((category, index) => (
-              <button
-                key={index}
-                className={`filter-btn px-6 py-2 rounded-lg text-sm transition-all duration-300 ${
-                  activeCategory === category 
-                    ? 'bg-neutral-900 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                onClick={() => handleCategoryChange(category)}
-              >
-                {category}
-              </button>
-            ))}
+            {loading ? (
+              <div className="text-center py-4">
+                <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-accent border-r-transparent"></div>
+                <span className="ml-2 text-gray-600">Loading categories...</span>
+              </div>
+            ) : (
+              ["All", ...tags.map(tag => tag.id)].map((category, index) => (
+                <button
+                  key={index}
+                  className={`filter-btn px-6 py-2 rounded-lg text-sm transition-all duration-300 ${
+                    activeCategory === category 
+                      ? 'bg-neutral-900 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  onClick={() => handleCategoryChange(category)}
+                >
+                  {category}
+                </button>
+              ))
+            )}
           </div>
 
           {/* Projects Grid */}
@@ -380,14 +394,8 @@ const Portfolio = () => {
               <div className="text-center py-12">
                 <p className="text-red-600">{error}</p>
                 <p className="text-gray-600 mt-2">
-                  Please add active projects in Portfolio Management or check your Firestore database.
+                  Please add active projects.
                 </p>
-                <Link
-                  to="/portfolio-management"
-                  className="mt-4 inline-block px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
-                >
-                  Go to Portfolio Management
-                </Link>
               </div>
             ) : filteredProjects.length > 0 ? (
               <div ref={projectsContainerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -428,13 +436,6 @@ const Portfolio = () => {
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-600">No active projects found for this category.</p>
-                <p className="text-gray-500 mt-2">Try selecting a different category or adding new active projects in Portfolio Management.</p>
-                <Link
-                  to="/portfolio-management"
-                  className="mt-4 inline-block px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
-                >
-                  Go to Portfolio Management
-                </Link>
               </div>
             )}
           </motion.div>
