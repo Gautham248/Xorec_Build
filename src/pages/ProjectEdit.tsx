@@ -274,6 +274,31 @@ const ProjectEdit: React.FC = () => {
     }
   };
 
+  // Process video URL for embed format
+  const convertVideoUrl = (url: string): string => {
+    if (!url) return '';
+    
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+      return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+    }
+    
+    const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?(?:vimeo\.com\/(?:video\/|))(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+    
+    return url;
+  };
+
+  const handleConvertVideo = () => {
+    const convertedUrl = convertVideoUrl(formData.videoURL);
+    setFormData(prev => ({ ...prev, videoURL: convertedUrl }));
+    toast.success('Video URL converted successfully!');
+  };
+
   // Handle title change
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProjectTitle(e.target.value);
@@ -772,15 +797,24 @@ const ProjectEdit: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Video URL (YouTube, Vimeo, or Google Drive)</label>
-                <input
-                  type="text"
-                  name="videoURL"
-                  value={formData.videoURL}
-                  onChange={handleChange}
-                  placeholder="https://www.youtube.com/watch?v=example"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="videoURL"
+                    value={formData.videoURL}
+                    onChange={handleChange}
+                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
+                    placeholder="Enter video URL (YouTube, Vimeo)"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleConvertVideo}
+                    className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/80 transition-colors"
+                  >
+                    Convert
+                  </button>
+                </div>
                 
                 {formData.videoURL && (
                   <div className="mt-2">
