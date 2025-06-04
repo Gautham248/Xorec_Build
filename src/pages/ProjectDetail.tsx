@@ -109,6 +109,23 @@ const ProjectDetail: React.FC = () => {
 
   const handleDragEnd = () => setIsDragging(false);
 
+    const getGridColumns = () => {
+    const sections = [
+      project.challenge,
+      project.solution,
+      project.results.length > 0
+    ].filter(Boolean).length;
+
+    switch (sections) {
+      case 3:
+        return 'md:grid-cols-3';
+      case 2:
+        return 'md:grid-cols-2';
+      default:
+        return '';
+    }
+  };
+
   if (!project) return <div className="p-10 text-center text-gray-500">Loading...</div>;
 
   return (
@@ -129,31 +146,41 @@ const ProjectDetail: React.FC = () => {
       </div>
 
       <div className="container mx-auto py-12">
-        <p className="mb-8 text-gray-700">{project.description}</p>
+        {project.description && (
+          <p className="mb-8 text-gray-700">{project.description}</p>
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          <div className="bg-gray-200 p-6 rounded-lg">
-            <h3 className="text-xl font-bold mb-4">The Challenge</h3>
-            <p className="text-gray-700">{project.challenge}</p>
+        {(project.challenge || project.solution || project.results.length > 0) && (
+          <div className={`grid grid-cols-1 ${getGridColumns()} gap-6 mb-16`}>
+            {project.challenge && (
+              <div className="bg-gray-200 p-6 rounded-lg">
+                <h3 className="text-xl font-bold mb-4">The Challenge</h3>
+                <p className="text-gray-700">{project.challenge}</p>
+              </div>
+            )}
+            
+            {project.solution && (
+              <div className="bg-gray-200 p-6 rounded-lg">
+                <h3 className="text-xl font-bold mb-4">Our Solution</h3>
+                <p className="text-gray-700">{project.solution}</p>
+              </div>
+            )}
+            
+            {project.results.length > 0 && (
+              <div className="bg-gray-200 p-6 rounded-lg">
+                <h3 className="text-xl font-bold mb-4">Project Results</h3>
+                <ul className="space-y-3">
+                  {project.results.map((result, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-2" />
+                      <span className="text-gray-700">{result}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-          
-          <div className="bg-gray-200 p-6 rounded-lg">
-            <h3 className="text-xl font-bold mb-4">Our Solution</h3>
-            <p className="text-gray-700">{project.solution}</p>
-          </div>
-          
-          <div className="bg-gray-200 p-6 rounded-lg">
-            <h3 className="text-xl font-bold mb-4">Project Results</h3>
-            <ul className="space-y-3">
-              {project.results.map((result, index) => (
-                <li key={index} className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-2" />
-                  <span className="text-gray-700">{result}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        )}
 
         {project.videoUrl && project.videoOrientation === 'Portrait' && project.gallery.length > 0 ? (
           <div className="mb-16 flex flex-col md:flex-row gap-8">

@@ -3,12 +3,15 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, enableIndexedDbPersistence, getDocsFromCache, QuerySnapshot, writeBatch, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase-config';
-import { Edit, Search, Filter, Trash2, Plus, Check, X, Star, LayoutGrid, Tag } from 'lucide-react';
+import { Edit, Search, Filter, Trash2, Plus, Check, X, Star, LayoutGrid, Tag, ArrowUp, ArrowDown } from 'lucide-react';
 import { gsap } from 'gsap';
 import toast, { Toaster } from 'react-hot-toast';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+type SortField = 'id' | 'year' | 'clientName' | 'status' | 'displayOrder';
+type SortDirection = 'asc' | 'desc';
 
 interface Project {
   id: string;
@@ -50,6 +53,8 @@ const PortfolioManagement: React.FC = () => {
   const [newTag, setNewTag] = useState('');
   const [deleteTag, setDeleteTag] = useState<string | null>(null);
   const [deleteTagProjects, setDeleteTagProjects] = useState<Project[]>([]);
+  const [sortField, setSortField] = useState<SortField>('displayOrder');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   // Fetch projects and tags from Firestore
   useEffect(() => {
@@ -156,11 +161,15 @@ const PortfolioManagement: React.FC = () => {
   // Initialize reordered projects when opening modal
   useEffect(() => {
     if (isReorderModalOpen) {
-      setReorderedProjects([...projects].filter(p => p.status === 'active').sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
+      // Only show active projects in the reorder modal
+      const activeProjects = projects
+        .filter(p => p.status === 'active')
+        .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+      setReorderedProjects(activeProjects);
     }
   }, [isReorderModalOpen, projects]);
 
-  // Filter projects based on active category and search term
+  // Filter and sort projects based on active category, search term, and sort settings
   const filteredProjects = projects
     .filter(project => {
       if (activeCategory === "All") return true;
@@ -171,6 +180,31 @@ const PortfolioManagement: React.FC = () => {
       const titleMatch = (project.id || '').toLowerCase().includes(searchTermLower);
       const clientMatch = (project.clientName || '').toLowerCase().includes(searchTermLower);
       return titleMatch || clientMatch;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case 'id':
+          comparison = (a.id || '').localeCompare(b.id || '');
+          break;
+        case 'year':
+          comparison = (a.year || 0) - (b.year || 0);
+          break;
+        case 'clientName':
+          comparison = (a.clientName || '').localeCompare(b.clientName || '');
+          break;
+        case 'status':
+          comparison = (a.status || '').localeCompare(b.status || '');
+          break;
+        case 'displayOrder':
+          comparison = (a.displayOrder || 0) - (b.displayOrder || 0);
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
 
   // GSAP animations
@@ -359,23 +393,22 @@ const PortfolioManagement: React.FC = () => {
     try {
       const batch = writeBatch(db);
 
-      if (bulkStatus === 'active') {
-        let highestDisplayOrder = 0;
-        projects.forEach(project => {
-          if (project.status === 'active' && project.displayOrder && project.displayOrder > highestDisplayOrder) {
-            highestDisplayOrder = project.displayOrder;
-          }
-        });
+      // Get current active projects and their display orders
+      const activeProjects = projects.filter(p => p.status === 'active' && !selectedProjects.includes(p.id));
+      const maxDisplayOrder = activeProjects.reduce((max, p) => Math.max(max, p.displayOrder || 0), 0);
 
+      if (bulkStatus === 'active') {
+        // Add new projects to the end of the order
         selectedProjects.forEach((projectId, index) => {
           const projectRef = doc(db, 'Projects', projectId);
           batch.update(projectRef, {
             status: bulkStatus,
-            displayOrder: highestDisplayOrder + index + 1,
+            displayOrder: maxDisplayOrder + index + 1,
             updatedAt: new Date()
           });
         });
       } else {
+        // Remove display order when deactivating
         selectedProjects.forEach(projectId => {
           const projectRef = doc(db, 'Projects', projectId);
           batch.update(projectRef, {
@@ -392,17 +425,10 @@ const PortfolioManagement: React.FC = () => {
         if (selectedProjects.includes(p.id)) {
           if (bulkStatus === 'active') {
             const index = selectedProjects.indexOf(p.id);
-            let highestDisplayOrder = 0;
-            projects.forEach(project => {
-              if (project.status === 'active' && project.displayOrder && project.displayOrder > highestDisplayOrder) {
-                highestDisplayOrder = project.displayOrder;
-              }
-            });
-
             return {
               ...p,
               status: bulkStatus,
-              displayOrder: highestDisplayOrder + index + 1,
+              displayOrder: maxDisplayOrder + index + 1,
               updatedAt: new Date()
             };
           } else {
@@ -616,9 +642,18 @@ const PortfolioManagement: React.FC = () => {
   };
 
   // Save reordered projects
+  const handleSort = (field: SortField) => {
+    if (field === sortField) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   const handleSaveOrder = async () => {
     if (reorderedProjects.length === 0) {
-      toast.error('No projects to reorder', { duration: 3000 });
+      toast.error('No active projects to reorder', { duration: 3000 });
       setIsReorderModalOpen(false);
       return;
     }
@@ -804,11 +839,61 @@ const PortfolioManagement: React.FC = () => {
                             className="rounded border-gray-300 text-accent focus:ring-accent"
                           />
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Project</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Client</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Year</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Order</th>
+                        <th 
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('id')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Project
+                            {sortField === 'id' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('clientName')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Client
+                            {sortField === 'clientName' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('year')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Year
+                            {sortField === 'year' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('status')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Status
+                            {sortField === 'status' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('displayOrder')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Order
+                            {sortField === 'displayOrder' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                          </div>
+                        </th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Featured</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Actions</th>
                       </tr>
