@@ -6,44 +6,10 @@ import { HyperText } from './magicui/hyper-text';
 
 const Hero: React.FC = () => {
   const heroRef = useRef<HTMLDivElement>(null);
-  const youtubeContainerRef = useRef<HTMLDivElement>(null);
-  // State to control zoom level, with appropriate initial values
-  const [zoomLevel, setZoomLevel] = useState(1.25); // Default zoom for desktop
-  const [aspectRatio, setAspectRatio] = useState(window.innerWidth / window.innerHeight);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   
   useEffect(() => {
-    // Function to update aspect ratio and set appropriate zoom level
-    const updateDimensions = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const newAspectRatio = width / height;
-      setAspectRatio(newAspectRatio);
-      
-      // Calculate appropriate zoom based on screen dimensions
-      // Mobile portrait (tall) needs more zoom to fill the screen width
-      if (width < 768) {
-        if (newAspectRatio < 0.8) {
-          // Very tall portrait mode - needs extra zoom
-          setZoomLevel(2.5);
-        } else if (newAspectRatio < 1) {
-          // Standard portrait mode
-          setZoomLevel(2);
-        } else {
-          // Landscape mobile (like in landscape orientation)
-          setZoomLevel(1.5);
-        }
-      } else {
-        // Desktop or tablet
-        setZoomLevel(1.25);
-      }
-    };
-    
-    // Initial calculation
-    updateDimensions();
-    
-    // Set up listener
-    window.addEventListener('resize', updateDimensions);
-    
     // Animation setup
     const ctx = gsap.context(() => {
       // Hero title animation
@@ -113,9 +79,16 @@ const Hero: React.FC = () => {
     
     return () => {
       ctx.revert();
-      window.removeEventListener('resize', updateDimensions);
     };
   }, []);
+
+  // Handle video load
+  const handleVideoLoad = () => {
+    setIsVideoLoaded(true);
+    if (videoRef.current) {
+      videoRef.current.play().catch(console.error);
+    }
+  };
 
   // Prevent default on click for the entire section to disable video interactions
   const preventClickInteraction = (e: React.MouseEvent) => {
@@ -129,37 +102,29 @@ const Hero: React.FC = () => {
       ref={heroRef} 
       className="relative h-screen flex items-center justify-center overflow-hidden bg-black"
     >
-      {/* YouTube Video Background */}
+      {/* Video Background */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <div 
-          ref={youtubeContainerRef}
-          className="relative w-full h-full"
-          style={{
-            transform: `scale(${zoomLevel})`, // Apply dynamic zoom based on device
-            transformOrigin: 'center',
-            transition: 'transform 0.3s ease-out' // Smooth transition when resizing
-          }}
-          onClick={preventClickInteraction}
-        >
-          {/* Invisible overlay to prevent interactions with the iframe */}
+        <div className="video-container">
+          {/* Invisible overlay to prevent interactions with the video */}
           <div 
             className="absolute inset-0 z-10" 
             onClick={preventClickInteraction}
           ></div>
           
-          <iframe
-            className="absolute w-full h-full pointer-events-none"
-            src="https://www.youtube.com/embed/ejVBQ_4Iv0Y?autoplay=1&mute=1&controls=0&loop=1&playlist=LM2L0iX11do&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&playsinline=1&fs=0"
-            title="Cinematic Video Background"
-            frameBorder="0"
-            allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen={false}
-            loading="lazy"
+          <video
+            ref={videoRef}
+            className="video-background"
+            src="https://ik.imagekit.io/x5qi7yd2f/FINAL%20BATCH/VIDEO/WEB%20SITE_4_prob3.mp4?updatedAt=1750266352530"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onLoadedData={handleVideoLoad}
             onError={(e) => {
-              const iframe = e.target as HTMLIFrameElement;
-              iframe.style.display = 'none';
+              console.error('Video failed to load:', e);
             }}
-          ></iframe>
+          />
         </div>
       </div>
       
@@ -202,33 +167,73 @@ const Hero: React.FC = () => {
         <ChevronDown size={24} />
       </div>
 
-      {/* Add a style tag to disable YouTube controls */}
       <style jsx>{`
-        /* Hide YouTube iframe border and any YouTube UI elements */
-        iframe {
-          border: none !important;
+        .video-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
         }
         
-        /* Additional styles to prevent interaction */
-        iframe:-webkit-full-screen {
-          display: none !important;
+        .video-background {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          min-width: 100%;
+          min-height: 100%;
+          width: auto;
+          height: auto;
+          transform: translate(-50%, -50%);
+          object-fit: cover;
+          pointer-events: none;
         }
         
-        @media (hover: hover) {
-          iframe:hover {
-            cursor: default !important;
+        /* Ensure full coverage on all devices */
+        @media (max-width: 768px) {
+          .video-background {
+            /* For mobile devices, ensure the video covers the full screen */
+            min-width: 100vw;
+            min-height: 100vh;
+            width: 100vw;
+            height: 100vh;
           }
         }
         
-        /* Improve YouTube video display on different screen sizes */
+        /* Handle very wide screens */
+        @media (min-aspect-ratio: 16/9) {
+          .video-background {
+            width: 100%;
+            height: auto;
+          }
+        }
+        
+        /* Handle very tall screens */
+        @media (max-aspect-ratio: 16/9) {
+          .video-background {
+            width: auto;
+            height: 100%;
+          }
+        }
+        
+        /* Specific adjustments for portrait mobile */
         @media (max-width: 767px) and (orientation: portrait) {
-          iframe {
-            width: 100vw;
+          .video-background {
+            width: auto;
             height: 100vh;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(1.35);
+            min-height: 100vh;
+            min-width: calc(100vh * 16/9); /* Assume 16:9 aspect ratio */
+          }
+        }
+        
+        /* Specific adjustments for landscape mobile */
+        @media (max-width: 767px) and (orientation: landscape) {
+          .video-background {
+            width: 100vw;
+            height: auto;
+            min-width: 100vw;
+            min-height: calc(100vw * 9/16); /* Assume 16:9 aspect ratio */
           }
         }
       `}</style>
